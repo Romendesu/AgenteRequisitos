@@ -1,2 +1,68 @@
+# --- Entorno Virtual ---
+venv/
+env/
+.venv/
+ENV/
+
+# --- Seguridad (CRÍTICO) ---
+# Nunca subir las API Keys de Groq o Gemini
 .env
-__pycache__
+*.env
+.secrets
+.api_keys
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# --- Base de Datos Vectorial y Persistencia ---
+# Ignora la DB local de ChromaDB para que no pese el repo
+data/db/
+*.db
+*.sqlite
+.chroma/
+
+# --- Salidas del Sistema ---
+# Ignora los documentos generados por los agentes
+data/output/*.pdf
+data/output/*.docx
+data/output/*.md
+!data/output/.gitkeep
+
+# --- Herramientas y Logs ---
+.logs/
+*.log
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.langsmith/
+
+# --- Sistema Operativo ---
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# --- Editores de Código ---
+.vscode/
+.idea/
+*.swp
+*.swo
