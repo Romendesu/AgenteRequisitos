@@ -1,0 +1,22 @@
+{
+    "lista_necesidades": [
+        {
+            "text": "El usuario deberia poder entrar al portar de alumnos y profesores y consultar el horario de su especialidad",
+            "actor": "usuario",
+            "action": "poder entrar",
+            "object": null,
+            "type": "functional",
+            "constraints": {},
+            "confidence": 0.9,
+            "llm_used": false
+        }
+    ],
+    "ambiguity_flags": [],
+    "entity_map": {},
+    "stats": {
+        "total_sentences": 1,
+        "requirements_found": 1,
+        "llm_calls": 0,
+        "avg_confidence": 0.9
+    }
+}
