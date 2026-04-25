@@ -1,0 +1,25 @@
+@import url('https://fonts.googleapis.com/css2?family=Google+Sans+Flex:opsz,wght@6..144,1..1000&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100..900;1,100..900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:ital,wght@0,100..700;1,100..700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+
+:root {
+    --headline: "Google Sans Flex", sans-serif;
+    --label: "Roboto", sans-serif;
+    --prompt-response: "Roboto Mono", monospace;
+}
+
+/* Fuentes de texto */
+h1, h2, h3, h4, h5, h6 {
+    font-family: var(--headline)
+}
+p {
+    font-family: var(--label)
+}
+.prompt{
+    font-family: var(--prompt-response)
+}
