@@ -1,16 +1,17 @@
-# --- Entorno Virtual ---
+# --- ENTORNOS VIRTUALES ---
 venv/
 env/
 .venv/
 ENV/
 
-# --- Seguridad ---
+# --- SEGURIDAD / ENV ---
 .env
-*.env
+.env.*
+!.env.example
 .secrets
 .api_keys
 
-# --- Python ---
+# --- PYTHON ---
 __pycache__/
 *.py[cod]
 *$py.class
@@ -32,19 +33,19 @@ wheels/
 .installed.cfg
 *.egg
 
-# --- Base de Datos Vectorial y Persistencia ---
+# --- BASE DE DATOS ---
 data/db/
 *.db
 *.sqlite
 .chroma/
 
-# --- Salidas del Sistema ---
+# --- SALIDAS ---
 data/output/*.pdf
 data/output/*.docx
 data/output/*.md
 !data/output/.gitkeep
 
-# --- Herramientas y Logs ---
+# --- LOGS / TESTING ---
 .logs/
 *.log
 .pytest_cache/
@@ -53,12 +54,36 @@ htmlcov/
 .mypy_cache/
 .langsmith/
 
-# --- Sistema Operativo ---
+# --- NODE / REACT ---
+node_modules/
+
+# Build frontend
+dist/
+build/
+
+# Vite cache
+.vite/
+
+# Logs node
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Testing frontend
+coverage/
+
+# --- PACKAGE MANAGERS ---
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# --- SISTEMA OPERATIVO ---
 .DS_Store
 Thumbs.db
 desktop.ini
 
-# --- Editores de Código ---
+# --- EDITORES ---
 .vscode/
 .idea/
 *.swp
