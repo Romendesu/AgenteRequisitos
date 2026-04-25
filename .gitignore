@@ -4,8 +4,7 @@ env/
 .venv/
 ENV/
 
-# --- Seguridad (CRÍTICO) ---
-# Nunca subir las API Keys de Groq o Gemini
+# --- Seguridad ---
 .env
 *.env
 .secrets
@@ -34,14 +33,12 @@ wheels/
 *.egg
 
 # --- Base de Datos Vectorial y Persistencia ---
-# Ignora la DB local de ChromaDB para que no pese el repo
 data/db/
 *.db
 *.sqlite
 .chroma/
 
 # --- Salidas del Sistema ---
-# Ignora los documentos generados por los agentes
 data/output/*.pdf
 data/output/*.docx
 data/output/*.md
