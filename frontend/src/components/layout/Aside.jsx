@@ -1,43 +1,52 @@
-// Aside del navegador
-// CONTENIDO: Logo (SVG), Opciones, Historial
-
-import logo from "../../assets/images/logo.svg";
+import bars from "../../assets/images/bars.svg";
 import chat from "../../assets/images/chat.svg";
 import search from "../../assets/images/search.svg";
 import settings from "../../assets/images/settings.svg";
 import auth from "../../assets/images/auth.svg";
 
-import Button from "../ui/Button";
-import useAside from "../../hooks/useAside";
+import Button from "./Button";
 
-export default function Aside() {
-    const { showAside, showText, toggleAside } = useAside(true);
+export default function Aside({ isOpen, showText, toggleAside }) {
+  return (
+    <aside
+      className={`fixed left-0 top-0 h-screen bg-gray-800 flex flex-col overflow-hidden transition-all duration-300 ease-in-out ${
+        isOpen ? "w-64" : "w-16"
+      }`}
+    >
+      {/* TOP */}
+      <div className="p-3">
+        <Button icon={bars} onClick={toggleAside} />
+      </div>
 
-    return (
-        <aside
-        className={`fixed p-3 bg-gray-800 h-screen flex flex-col justify-between transition-all duration-300 ${
-            showAside ? "w-64" : "w-16"
-        }`}
-        >
-            <Button icon={logo} onClick={toggleAside} />
+      <hr className="border-gray-600 mx-3" />
 
-            <div className="flex flex-col justify-between">
-                <Button icon={chat}>
-                    {showText && <h1>Nueva conversación</h1>}
-                </Button>
-                <Button icon={search}>
-                    {showText && <h1>Buscar conversación</h1>}
-                </Button>
-                <Button icon={settings}>
-                    {showText && <h1>Configuración</h1>}
-                </Button>
-            </div>
+      {/* MIDDLE */}
+      <div className="flex flex-col gap-2 flex-1 justify-center p-3">
+        <Button icon={chat}>
+          <span className={`transition-opacity duration-200 ${
+            showText ? "opacity-100" : "opacity-0"
+          }`}>
+            Nueva conversación
+          </span>
+        </Button>
 
-            <div>
-                <Button icon={auth}>
-                    {showText && <h1>Autentifiquese</h1>}
-                </Button>
-            </div>
-        </aside>
-    )
+        <Button icon={search}>
+          <span className={`transition-opacity duration-200 ${
+            showText ? "opacity-100" : "opacity-0"
+          }`}>
+            Buscar conversación
+          </span>
+        </Button>
+
+        <Button icon={settings}>
+          <span className={`transition-opacity duration-200 ${
+            showText ? "opacity-100" : "opacity-0"
+          }`}>
+            Configuración
+          </span>
+        </Button>
+      </div>
+
+    </aside>
+  );
 }
