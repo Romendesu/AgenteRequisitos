@@ -5,6 +5,7 @@ import Dock from "../components/layout/Dock";
 // Hooks
 import useIsMobile from "../hooks/matchMedia";
 import useAside from "../hooks/useAside";
+import { useState } from "react";
 
 // UI
 import IntroductionSection from "../components/ui/IntroductionSection";
@@ -12,6 +13,9 @@ import PromptLabel from "../components/ui/PromptLabel";
 
 // Menu de inicio
 export default function Home() {
+  // Actualizar el label con el response haciendo una llamada al servidor
+  const [response, setResponse] = useState();
+
   const isMobile = useIsMobile();
   const isDesktop = !isMobile;
 
@@ -40,13 +44,13 @@ export default function Home() {
       >
         <div className="p-6">
           <h1 className="text-xl font-semibold">
-            Requisitos AI
+            MoSCoW AI
           </h1>
         </div>
 
         <div className="flex flex-col items-center">
-                <IntroductionSection />
-                <PromptLabel />
+                <IntroductionSection response={response}/>
+                <PromptLabel setResponse={setResponse}/>
         </div>
       </main>
     </div>
