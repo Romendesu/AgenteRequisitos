@@ -1,10 +1,11 @@
 import os
 import re
 from datetime import datetime, timedelta, timezone
+from typing import Optional
 
 import bcrypt
 import jwt
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Query, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 import database as db
@@ -60,6 +61,29 @@ def decode_token(token: str) -> dict:
 def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(_bearer)) -> dict:
     try:
         payload = decode_token(credentials.credentials)
+        user = db.get_user_by_id(payload["sub"])
+        if not user:
+            raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Usuario no encontrado")
+        return user
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Token expirado")
+    except Exception:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Token inválido")
+
+
+_bearer_optional = HTTPBearer(auto_error=False)
+
+
+def get_download_user(
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(_bearer_optional),
+    token: Optional[str] = Query(None),
+) -> dict:
+    """Auth flexible para descargas: acepta header Authorization o ?token= en query."""
+    raw = credentials.credentials if credentials else token
+    if not raw:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "No autenticado")
+    try:
+        payload = decode_token(raw)
         user = db.get_user_by_id(payload["sub"])
         if not user:
             raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Usuario no encontrado")

@@ -99,6 +99,14 @@ _SENALES: dict[str, list[tuple[str, int]]] = {
         (r"\bcumpliendo con (la|las) (normativa|regulaci[oó]n|ley|legislaci[oó]n)\b", 10),
         (r"\b(legislaci[oó]n|regulaci[oó]n) (a[eé]rea|civil|local|vigente)\b", 9),
 
+        # Lenguaje regulatorio ampliado: "según/conforme a/de acuerdo con normativa/reglamento"
+        (r"\b(conforme a|seg[uú]n|de acuerdo con)\b.{0,25}\b(la |el |las |los )?"
+         r"(normativa|ley|reglamento|regulaci[oó]n|decreto|c[oó]digo|est[aá]ndar|pol[ií]tica)\b", 9),
+        (r"\b(bajo|en virtud de|sujeto a)\b.{0,15}\b(la |el )?"
+         r"(normativa|ley|reglamento|legislaci[oó]n|regulaci[oó]n)\b", 8),
+        (r"\b(en cumplimiento de?|cumplir[aá]?)\b.{0,20}"
+         r"\b(reglamento|normativa|ley|protocolo|regulaci[oó]n|est[aá]ndar)\b", 8),
+
         # Restricciones físicas del dominio con valores límite
         (r"\b(altitud|altura)\b.{0,25}\b(superior a|m[aá]xima de|l[ií]mite de)\b"
          r".{0,15}\d+\s*(metros?|pies|feet|\bm\b)", 9),
@@ -107,16 +115,50 @@ _SENALES: dict[str, list[tuple[str, int]]] = {
         (r"\bvelocidad del viento\b.{0,40}\d+\s*(km/h|m/s|nudos?)", 9),
         (r"\breserva (de bater[ií]a|energ[eé]tica)\b.{0,30}\d+\s*%", 9),
 
+        # Restricciones físicas/operacionales ampliadas (temperatura, presión, humedad…)
+        (r"\b(temperatura|presi[oó]n|humedad|nivel de radiaci[oó]n)\b.{0,30}"
+         r"\b(m[aá]xima|m[ií]nima|no puede superar|no puede exceder|l[ií]mite de)\b", 9),
+        (r"\b(zona de exclusi[oó]n|zona restringida|[aá]rea restringida|espacio a[eé]reo restringido|zona prohibida)\b", 9),
+        (r"\bno puede (operar|volar|funcionar|circular)\b.{0,30}\b(durante|en|bajo|con|si hay)\b", 8),
+        (r"\bcapacidad m[aá]xima (de|del)\b.{0,20}\d+\s*(kg|toneladas?|litros?|personas?|unidades?)\b", 9),
+
+        # Prohibiciones declarativas absolutas
+        (r"\bqueda(n)?\s+prohibid[oa]s?\b", 9),
+        (r"\bbajo\s+ning[uú]n\s+concepto\b", 9),
+        (r"\bnunca\s+(puede|podr[aá]|se (puede|podr[aá]))\b", 8),
+
+        # "ningún/ninguna [entidad] puede/podrá" — reglas institucionales generalizadas
+        (r"\bning[uú]n[ao]?\b.{0,30}\b(puede|podr[aá])\b", 8),
+        (r"\bninguna ruta (puede ser aprobada|podr[aá] ser aprobada)\b", 9),
+        (r"\bno se permitir[aá] el despacho.{0,30}supere\b", 9),
+
+        # "X no puede [acción] al mismo tiempo / simultáneamente"
+        (r"\bun (docente|profesor|dron|drone|veh[ií]culo|aula|sala|empleado|trabajador|operador)\b.{0,30}"
+         r"\bno puede\b.{0,20}\b(dos|m[uú]ltiples|simult[aá]neo|a la vez|al mismo tiempo)\b", 8),
+        (r"\bun[ao]?\s+\w+\s+no puede\b.{0,20}\b(al mismo tiempo|simult[aá]neamente|a la vez)\b", 8),
+
+        # Aprobación propia prohibida (conflicto de interés institucional)
+        (r"\bno puede (aprobar|validar|autorizar|revisar)\b.{0,30}\b(sus propias?|su propia?)\b", 9),
+
+        # Invariantes de negocio: "no puede ser negativo/nulo", "no puede modificarse una vez"
+        (r"\bno (puede|podr[aá]) ser (negativo|nulo|menor (que|a|de) cero|inferior a cero)\b", 9),
+        (r"\bno (puede|podr[aá]) (modificarse|alterarse|eliminarse|cambiarse)\b.{0,25}"
+         r"\b(una vez|despu[eé]s de|tras)\b", 9),
+
+        # "no se permite [acción sobre datos/registros]"
+        (r"\bno se (permite|permitir[aá])\b.{0,20}"
+         r"\b(la modificaci[oó]n|la alteraci[oó]n|la eliminaci[oó]n|el acceso|la divulgaci[oó]n)\b", 8),
+
+        # Límites de créditos/horas/asignaturas institucionales con valor numérico
+        (r"\b(cr[eé]ditos?|horas? lectivas?|horas? semanales?|asignaturas?|materias?)\b.{0,30}"
+         r"\b(no puede superar|l[ií]mite de|m[aá]ximo de)\b.{0,15}\d+\b", 8),
+
         # Restricciones de scheduling institucional
         (r"\bhorario\b.{0,30}\b(antes del periodo de|previo a la)\b.{0,15}\bmatr[ií]cula\b", 8),
 
-        # Restricciones tipo "X no puede Y al mismo tiempo"
-        (r"\bun (docente|profesor|dron|drone|veh[ií]culo|aula|sala)\b.{0,30}"
-         r"\bno puede\b.{0,20}\b(dos|m[uú]ltiples|simult[aá]neo)\b", 8),
-
-        # Reglas de negocio inamovibles con "ningún/ninguna"
-        (r"\bninguna ruta (puede ser aprobada|podr[aá] ser aprobada)\b", 9),
-        (r"\bno se permitir[aá] el despacho.{0,30}supere\b", 9),
+        # Exclusividad institucional: "solo puede ser asignado a un único"
+        (r"\bsolo (puede|podr[aá]) (ser asignad[oa]|pertenecer|estar asignad[oa])\b.{0,30}"
+         r"\b(un[oa]? solo|un [úu]nico)\b", 8),
 
         # Restricciones académicas concretas
         (r"\bcarga horaria (semanal|total)\b.{0,30}(plan de estudios|normativa|reglamento)", 8),

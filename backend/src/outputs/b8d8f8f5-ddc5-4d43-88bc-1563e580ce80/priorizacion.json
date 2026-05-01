@@ -1,0 +1,38 @@
+{
+  "metadata": {
+    "fecha": "2026-05-01 22:49:48",
+    "metodo": "MoSCoW con Scoring Determinista Multidimensional",
+    "pesos": {
+      "impacto_negocio": 0.4,
+      "riesgo_tecnico": 0.25,
+      "esfuerzo_estimado": 0.2,
+      "dependencias": 0.15
+    },
+    "umbrales": {
+      "must_have": 3.5,
+      "should_have": 2.5,
+      "could_have": 1.5
+    }
+  },
+  "requisitos_priorizados": [
+    {
+      "requisito_id": "RF-01",
+      "dimensiones": {
+        "impacto_negocio": 5,
+        "riesgo_tecnico": 3,
+        "esfuerzo_estimado": 3,
+        "dependencias": 3
+      },
+      "score_final": 3.8,
+      "categoria_moscow": "Must Have",
+      "justificacion": "Must Have — score 3.8/5: alto impacto de negocio (5/5). Requisito crítico para el MVP."
+    }
+  ],
+  "moscow_labels": {
+    "RF-01": "Must Have"
+  },
+  "conflict_report": [],
+  "priority_scores": {
+    "RF-01": 3.8
+  }
+}

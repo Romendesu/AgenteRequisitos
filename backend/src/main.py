@@ -1,6 +1,6 @@
 import json
 from pathlib import Path
-from typing import Optional, Dict, Any
+from typing import Any, Dict, Optional
 
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
@@ -28,6 +28,12 @@ class ProjectRequest(BaseModel):
 
 class RequisitoRequest(BaseModel):
     texto: str = Field(..., min_length=1)
+
+class UpdateProfileRequest(BaseModel):
+    username: Optional[str] = None
+    email: Optional[str] = None
+    password: Optional[str] = None
+    avatar: Optional[str] = None  # base64 data URL
 
 
 # ─── Gestor de proyecto ───────────────────────────────────────────────────────
@@ -111,7 +117,10 @@ class GestorProyecto:
         )
 
         priorizacion_path = str(self.output_dir / "priorizacion.json") if priorizacion else None
-        resultado = self.writer.generar_documento(str(temp), priorizacion_path)
+        resultado = self.writer.generar_documento(
+            str(temp), priorizacion_path,
+            output_dir=str(self.output_dir / "documento_requisitos"),
+        )
         temp.unlink(missing_ok=True)
 
         descargar = {
@@ -179,6 +188,51 @@ def register(req: RegisterRequest):
         password_hash=auth.hash_password(req.password),
     )
     return {"id": user["id"], "email": user["email"], "username": user["username"]}
+
+
+@app.patch("/auth/profile", tags=["Auth"])
+def update_profile(req: UpdateProfileRequest, user=Depends(auth.get_current_user)):
+    updates: Dict[str, Any] = {}
+
+    if req.username is not None:
+        u = req.username.strip()
+        if not u:
+            raise HTTPException(400, "El nombre de usuario no puede estar vacío")
+        updates["username"] = u
+
+    if req.email is not None:
+        if not auth.validate_email(req.email):
+            raise HTTPException(400, "Email inválido")
+        existing = db.get_user_by_email(req.email)
+        if existing and existing["id"] != user["id"]:
+            raise HTTPException(409, "Ese email ya está en uso")
+        updates["email"] = req.email
+
+    if req.password is not None:
+        errors = auth.validate_password(req.password)
+        if errors:
+            raise HTTPException(400, "; ".join(errors))
+        updates["password_hash"] = auth.hash_password(req.password)
+
+    if req.avatar is not None:
+        updates["avatar"] = req.avatar
+
+    if not updates:
+        raise HTTPException(400, "No hay cambios que aplicar")
+
+    updated = db.update_user(user["id"], updates)
+    if not updated:
+        raise HTTPException(500, "Error actualizando el perfil")
+    token = auth.create_token(updated["id"], updated["email"], updated["username"])
+    return {
+        "token": token,
+        "user": {
+            "id": updated["id"],
+            "email": updated["email"],
+            "username": updated["username"],
+            "avatar": updated.get("avatar"),
+        },
+    }
 
 
 @app.post("/auth/login", tags=["Auth"])
@@ -311,7 +365,7 @@ def preview_documento(project_id: str, user=Depends(auth.get_current_user)):
 
 
 @app.get("/projects/{project_id}/documento/{formato}", tags=["Documentación"])
-def descargar_documento(project_id: str, formato: str, user=Depends(auth.get_current_user)):
+def descargar_documento(project_id: str, formato: str, user=Depends(auth.get_download_user)):
     _verificar_proyecto(project_id, user["id"])
     formato = formato.lower()
     if formato not in ["md", "pdf", "docx"]:

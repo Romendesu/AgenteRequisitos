@@ -1,0 +1,108 @@
+{
+  "metadata": {
+    "fecha": "2026-05-01 22:22:25",
+    "metodo": "MoSCoW con Scoring Determinista Multidimensional",
+    "pesos": {
+      "impacto_negocio": 0.4,
+      "riesgo_tecnico": 0.25,
+      "esfuerzo_estimado": 0.2,
+      "dependencias": 0.15
+    },
+    "umbrales": {
+      "must_have": 3.5,
+      "should_have": 2.5,
+      "could_have": 1.5
+    }
+  },
+  "requisitos_priorizados": [
+    {
+      "requisito_id": "RD-01",
+      "dimensiones": {
+        "impacto_negocio": 5,
+        "riesgo_tecnico": 3,
+        "esfuerzo_estimado": 2,
+        "dependencias": 3
+      },
+      "score_final": 4.0,
+      "categoria_moscow": "Must Have",
+      "justificacion": "Must Have — score 4.0/5: alto impacto de negocio (5/5), bajo coste de implementación (2/5). Requisito crítico para el MVP."
+    },
+    {
+      "requisito_id": "RNF-03",
+      "dimensiones": {
+        "impacto_negocio": 5,
+        "riesgo_tecnico": 3,
+        "esfuerzo_estimado": 3,
+        "dependencias": 2
+      },
+      "score_final": 3.65,
+      "categoria_moscow": "Must Have",
+      "justificacion": "Must Have — score 3.65/5: alto impacto de negocio (5/5). Requisito crítico para el MVP."
+    },
+    {
+      "requisito_id": "RF-02",
+      "dimensiones": {
+        "impacto_negocio": 3,
+        "riesgo_tecnico": 3,
+        "esfuerzo_estimado": 3,
+        "dependencias": 3
+      },
+      "score_final": 3.0,
+      "categoria_moscow": "Should Have",
+      "justificacion": "Should Have — score 3.0/5"
+    },
+    {
+      "requisito_id": "RF-01",
+      "dimensiones": {
+        "impacto_negocio": 3,
+        "riesgo_tecnico": 2,
+        "esfuerzo_estimado": 2,
+        "dependencias": 3
+      },
+      "score_final": 2.95,
+      "categoria_moscow": "Should Have",
+      "justificacion": "Should Have — score 2.95/5: bajo coste de implementación (2/5)."
+    },
+    {
+      "requisito_id": "RNF-01",
+      "dimensiones": {
+        "impacto_negocio": 3,
+        "riesgo_tecnico": 3,
+        "esfuerzo_estimado": 3,
+        "dependencias": 2
+      },
+      "score_final": 2.85,
+      "categoria_moscow": "Should Have",
+      "justificacion": "Should Have — score 2.85/5"
+    },
+    {
+      "requisito_id": "RNF-02",
+      "dimensiones": {
+        "impacto_negocio": 3,
+        "riesgo_tecnico": 3,
+        "esfuerzo_estimado": 3,
+        "dependencias": 2
+      },
+      "score_final": 2.85,
+      "categoria_moscow": "Should Have",
+      "justificacion": "Should Have — score 2.85/5"
+    }
+  ],
+  "moscow_labels": {
+    "RF-01": "Should Have",
+    "RF-02": "Should Have",
+    "RNF-01": "Should Have",
+    "RNF-02": "Should Have",
+    "RD-01": "Must Have",
+    "RNF-03": "Must Have"
+  },
+  "conflict_report": [],
+  "priority_scores": {
+    "RF-01": 2.95,
+    "RF-02": 3.0,
+    "RNF-01": 2.85,
+    "RNF-02": 2.85,
+    "RD-01": 4.0,
+    "RNF-03": 3.65
+  }
+}

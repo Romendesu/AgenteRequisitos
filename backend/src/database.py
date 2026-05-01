@@ -41,6 +41,11 @@ def get_user_by_id(uid: str) -> dict | None:
     return results[0] if results else None
 
 
+def update_user(user_id: str, updates: dict) -> dict | None:
+    _users.update(updates, Q.id == user_id)
+    return get_user_by_id(user_id)
+
+
 # ─── Proyectos ────────────────────────────────────────────────────────────────
 
 def create_project(user_id: str, nombre: str, descripcion: str) -> dict:

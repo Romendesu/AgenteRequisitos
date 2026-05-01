@@ -141,22 +141,22 @@ PLANTILLA_MD = """# Documento de Especificación de Requisitos de Software
 """
 
 CSS_PDF = """
+@page { margin: 2cm 2.5cm; }
 body {
     font-family: Arial, sans-serif;
     font-size: 11pt;
     line-height: 1.6;
     color: #1a1a2e;
-    margin: 2cm 2.5cm;
 }
-h1 { font-size: 20pt; color: #0f3460; border-bottom: 3px solid #0f3460; padding-bottom: 8px; }
-h2 { font-size: 15pt; color: #16213e; border-bottom: 1px solid #ccc; padding-bottom: 4px; margin-top: 24px; }
-h3 { font-size: 12pt; color: #533483; margin-top: 18px; }
-table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 10pt; }
-th { background-color: #0f3460; color: white; padding: 8px 10px; text-align: left; }
-td { padding: 6px 10px; border: 1px solid #ddd; }
+h1 { font-size: 18pt; color: #0f3460; border-bottom: 2px solid #0f3460; padding-bottom: 6px; }
+h2 { font-size: 14pt; color: #16213e; border-bottom: 1px solid #ccc; padding-bottom: 3px; margin-top: 20px; }
+h3 { font-size: 11pt; color: #533483; margin-top: 14px; }
+table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 9pt; }
+th { background-color: #0f3460; color: white; padding: 6px 8px; text-align: left; }
+td { padding: 5px 8px; border: 1px solid #ddd; }
 tr:nth-child(even) td { background-color: #f4f6fb; }
-code, pre { background: #f0f0f0; padding: 2px 6px; border-radius: 3px; font-family: monospace; }
-hr { border: none; border-top: 1px solid #ddd; margin: 20px 0; }
+code, pre { background: #f0f0f0; padding: 2px 4px; font-family: monospace; font-size: 9pt; }
+hr { border-top: 1px solid #ddd; margin: 16px 0; }
 em { color: #666; font-style: italic; }
 """
 
@@ -284,28 +284,47 @@ class AgenteWriter:
         )
 
     def _exportar_pdf(self, contenido_md: str, ruta_pdf: str) -> bool:
-        """Convierte el Markdown a PDF usando markdown2 + WeasyPrint."""
+        """Convierte el Markdown a PDF usando markdown2 + xhtml2pdf (o WeasyPrint como fallback)."""
         try:
             import markdown2
-            from weasyprint import HTML, CSS
-
             html_body = markdown2.markdown(
                 contenido_md,
                 extras=["tables", "fenced-code-blocks", "header-ids"]
             )
             html_completo = (
                 "<!DOCTYPE html><html lang='es'>"
-                "<head><meta charset='utf-8'><title>Documento de Requisitos</title></head>"
+                "<head><meta charset='utf-8'><title>Documento de Requisitos</title>"
+                f"<style>{CSS_PDF}</style></head>"
                 f"<body>{html_body}</body></html>"
             )
+        except ImportError:
+            print("[Writer] markdown2 no disponible — omitiendo PDF")
+            return False
+
+        # Intentar xhtml2pdf primero (Python puro, sin dependencias nativas)
+        try:
+            from xhtml2pdf import pisa
+            with open(ruta_pdf, "wb") as f:
+                resultado = pisa.CreatePDF(html_completo, dest=f, encoding="utf-8")
+            if resultado.err:
+                raise RuntimeError(f"xhtml2pdf error code {resultado.err}")
+            return True
+        except ImportError:
+            pass
+        except Exception as e:
+            print(f"[Writer] xhtml2pdf falló: {e}")
+            return False
+
+        # Fallback: WeasyPrint (requiere GTK en Windows)
+        try:
+            from weasyprint import HTML, CSS
             HTML(string=html_completo).write_pdf(ruta_pdf, stylesheets=[CSS(string=CSS_PDF)])
             return True
         except ImportError:
-            print("[Writer] WeasyPrint o markdown2 no disponible — omitiendo PDF")
-            return False
+            print("[Writer] xhtml2pdf y WeasyPrint no disponibles — omitiendo PDF")
         except Exception as e:
-            print(f"[Writer] Error generando PDF: {e}")
-            return False
+            print(f"[Writer] WeasyPrint falló: {e}")
+        return False
 
     def _exportar_docx(self, requisitos: List[Dict], priorizacion: Optional[Dict], ruta_docx: str) -> bool:
         """Genera el documento DOCX con python-docx."""
@@ -425,7 +444,7 @@ class AgenteWriter:
             print(f"[Writer] Error generando DOCX: {e}")
             return False
 
-    def generar_documento(self, archivo_requisitos: str, archivo_priorizacion: Optional[str] = None) -> Dict[str, Any]:
+    def generar_documento(self, archivo_requisitos: str, archivo_priorizacion: Optional[str] = None, output_dir: Optional[str] = None) -> Dict[str, Any]:
         """
         Genera el documento formal en MD, PDF y DOCX.
 
@@ -458,7 +477,7 @@ class AgenteWriter:
             with open("outputs/requisitos_priorizados.json", "r", encoding="utf-8") as f:
                 priorizacion = json.load(f)
 
-        directorio = Path("outputs/documento_requisitos")
+        directorio = Path(output_dir) if output_dir else Path("outputs/documento_requisitos")
         directorio.mkdir(parents=True, exist_ok=True)
 
         print("\n[Writer] Generando documento formal de requisitos...")

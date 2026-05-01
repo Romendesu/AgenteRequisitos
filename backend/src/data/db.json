@@ -16,6 +16,22 @@
       "descripcion": "Sistema de gestión y despacho autónomo para una flota de drones de reparto en zonas urbanas densas. El sistema coordina desde la recepción del pedido en el almacén hasta el aterrizaje en \"Smart-Pads\" instalados en los domicilios de los clientes.",
       "created_at": "2026-05-01T17:16:48.668241",
       "status": "active"
+    },
+    "3": {
+      "id": "02587f4f-fb0a-42dc-856f-947b5b655bfb",
+      "user_id": "4aeb8325-96d0-4198-9248-60e6f41ac11c",
+      "nombre": "Tienda de perfumes",
+      "descripcion": "Un gestor de perfumeria",
+      "created_at": "2026-05-01T22:14:44.237121",
+      "status": "active"
+    },
+    "14": {
+      "id": "b8d8f8f5-ddc5-4d43-88bc-1563e580ce80",
+      "user_id": "4aeb8325-96d0-4198-9248-60e6f41ac11c",
+      "nombre": "Perfumeria",
+      "descripcion": "Ejemplo en llamada de ds",
+      "created_at": "2026-05-01T22:48:21.188256",
+      "status": "active"
     }
   },
   "requirements": {
@@ -114,6 +130,62 @@
       "prioridad": "Alta",
       "criterio_aceptacion": "La batería del dron debe tener al menos un 20% de reserva para el aterrizaje de emergencia después de calcular el consumo estimado de la ruta.",
       "project_id": "69e47705-a524-486e-be2c-9e118775e56c"
+    },
+    "25": {
+      "id": "RF-01",
+      "tipo": "Funcional",
+      "descripcion": "Se deben visualizar los perfumes, segun su precio, fragancia e intensidad",
+      "prioridad": "Media",
+      "criterio_aceptacion": "",
+      "project_id": "02587f4f-fb0a-42dc-856f-947b5b655bfb"
+    },
+    "26": {
+      "id": "RF-02",
+      "tipo": "Funcional",
+      "descripcion": "El sistema permite que los perfumes se puedan organizar por precios, coste y cantidad",
+      "prioridad": "Media",
+      "criterio_aceptacion": "",
+      "project_id": "02587f4f-fb0a-42dc-856f-947b5b655bfb"
+    },
+    "27": {
+      "id": "RNF-01",
+      "tipo": "No Funcional",
+      "descripcion": "El sistema debe tardar entre 5 segundos a 10 segundos en procesar la compra del usuario",
+      "prioridad": "Media",
+      "criterio_aceptacion": "",
+      "project_id": "02587f4f-fb0a-42dc-856f-947b5b655bfb"
+    },
+    "28": {
+      "id": "RNF-02",
+      "tipo": "No Funcional",
+      "descripcion": "Se debe emplear una arquitectura MVC",
+      "prioridad": "Media",
+      "criterio_aceptacion": "",
+      "project_id": "02587f4f-fb0a-42dc-856f-947b5b655bfb"
+    },
+    "29": {
+      "id": "RD-01",
+      "tipo": "Dominio",
+      "descripcion": "El sistema debe respetar el RGPD al ingresar usuarios",
+      "prioridad": "Alta",
+      "criterio_aceptacion": "La aplicación de registro de usuarios debe cumplir con la normativa del Reglamento General de Protección de Datos (RGPD) en cuanto a la recopilación, almacenamiento y tratamiento de datos personales",
+      "project_id": "02587f4f-fb0a-42dc-856f-947b5b655bfb"
+    },
+    "30": {
+      "id": "RNF-03",
+      "tipo": "No Funcional",
+      "descripcion": "El sistema debe respetar toda la normativa de los pagos a la hora de hacer transacciones",
+      "prioridad": "Alta",
+      "criterio_aceptacion": "cumplimiento de las normativas legales",
+      "project_id": "02587f4f-fb0a-42dc-856f-947b5b655bfb"
+    },
+    "31": {
+      "id": "RF-01",
+      "tipo": "Funcional",
+      "descripcion": "El sistema debe realizar una búsqueda de perfumes en función de la intensidad y el olor, devolviendo los resultados ordenados por relevancia.",
+      "prioridad": "Alta",
+      "criterio_aceptacion": "La búsqueda devuelve un conjunto de resultados con al menos 90% de coincidencia con la intensidad y el olor especificados en la consulta.",
+      "project_id": "b8d8f8f5-ddc5-4d43-88bc-1563e580ce80"
     }
   },
   "priorizaciones": {
@@ -309,6 +381,158 @@
           "RD-01": 2.25,
           "RF-05": 3.3,
           "RD-02": 3.3
+        }
+      }
+    },
+    "3": {
+      "project_id": "02587f4f-fb0a-42dc-856f-947b5b655bfb",
+      "resultado": {
+        "metadata": {
+          "fecha": "2026-05-01 22:22:25",
+          "metodo": "MoSCoW con Scoring Determinista Multidimensional",
+          "pesos": {
+            "impacto_negocio": 0.4,
+            "riesgo_tecnico": 0.25,
+            "esfuerzo_estimado": 0.2,
+            "dependencias": 0.15
+          },
+          "umbrales": {
+            "must_have": 3.5,
+            "should_have": 2.5,
+            "could_have": 1.5
+          }
+        },
+        "requisitos_priorizados": [
+          {
+            "requisito_id": "RD-01",
+            "dimensiones": {
+              "impacto_negocio": 5,
+              "riesgo_tecnico": 3,
+              "esfuerzo_estimado": 2,
+              "dependencias": 3
+            },
+            "score_final": 4.0,
+            "categoria_moscow": "Must Have",
+            "justificacion": "Must Have — score 4.0/5: alto impacto de negocio (5/5), bajo coste de implementación (2/5). Requisito crítico para el MVP."
+          },
+          {
+            "requisito_id": "RNF-03",
+            "dimensiones": {
+              "impacto_negocio": 5,
+              "riesgo_tecnico": 3,
+              "esfuerzo_estimado": 3,
+              "dependencias": 2
+            },
+            "score_final": 3.65,
+            "categoria_moscow": "Must Have",
+            "justificacion": "Must Have — score 3.65/5: alto impacto de negocio (5/5). Requisito crítico para el MVP."
+          },
+          {
+            "requisito_id": "RF-02",
+            "dimensiones": {
+              "impacto_negocio": 3,
+              "riesgo_tecnico": 3,
+              "esfuerzo_estimado": 3,
+              "dependencias": 3
+            },
+            "score_final": 3.0,
+            "categoria_moscow": "Should Have",
+            "justificacion": "Should Have — score 3.0/5"
+          },
+          {
+            "requisito_id": "RF-01",
+            "dimensiones": {
+              "impacto_negocio": 3,
+              "riesgo_tecnico": 2,
+              "esfuerzo_estimado": 2,
+              "dependencias": 3
+            },
+            "score_final": 2.95,
+            "categoria_moscow": "Should Have",
+            "justificacion": "Should Have — score 2.95/5: bajo coste de implementación (2/5)."
+          },
+          {
+            "requisito_id": "RNF-01",
+            "dimensiones": {
+              "impacto_negocio": 3,
+              "riesgo_tecnico": 3,
+              "esfuerzo_estimado": 3,
+              "dependencias": 2
+            },
+            "score_final": 2.85,
+            "categoria_moscow": "Should Have",
+            "justificacion": "Should Have — score 2.85/5"
+          },
+          {
+            "requisito_id": "RNF-02",
+            "dimensiones": {
+              "impacto_negocio": 3,
+              "riesgo_tecnico": 3,
+              "esfuerzo_estimado": 3,
+              "dependencias": 2
+            },
+            "score_final": 2.85,
+            "categoria_moscow": "Should Have",
+            "justificacion": "Should Have — score 2.85/5"
+          }
+        ],
+        "moscow_labels": {
+          "RF-01": "Should Have",
+          "RF-02": "Should Have",
+          "RNF-01": "Should Have",
+          "RNF-02": "Should Have",
+          "RD-01": "Must Have",
+          "RNF-03": "Must Have"
+        },
+        "conflict_report": [],
+        "priority_scores": {
+          "RF-01": 2.95,
+          "RF-02": 3.0,
+          "RNF-01": 2.85,
+          "RNF-02": 2.85,
+          "RD-01": 4.0,
+          "RNF-03": 3.65
+        }
+      }
+    },
+    "4": {
+      "project_id": "b8d8f8f5-ddc5-4d43-88bc-1563e580ce80",
+      "resultado": {
+        "metadata": {
+          "fecha": "2026-05-01 22:49:48",
+          "metodo": "MoSCoW con Scoring Determinista Multidimensional",
+          "pesos": {
+            "impacto_negocio": 0.4,
+            "riesgo_tecnico": 0.25,
+            "esfuerzo_estimado": 0.2,
+            "dependencias": 0.15
+          },
+          "umbrales": {
+            "must_have": 3.5,
+            "should_have": 2.5,
+            "could_have": 1.5
+          }
+        },
+        "requisitos_priorizados": [
+          {
+            "requisito_id": "RF-01",
+            "dimensiones": {
+              "impacto_negocio": 5,
+              "riesgo_tecnico": 3,
+              "esfuerzo_estimado": 3,
+              "dependencias": 3
+            },
+            "score_final": 3.8,
+            "categoria_moscow": "Must Have",
+            "justificacion": "Must Have — score 3.8/5: alto impacto de negocio (5/5). Requisito crítico para el MVP."
+          }
+        ],
+        "moscow_labels": {
+          "RF-01": "Must Have"
+        },
+        "conflict_report": [],
+        "priority_scores": {
+          "RF-01": 3.8
         }
       }
     }

@@ -1,7 +1,7 @@
 # Documento de Especificación de Requisitos de Software
 
 **Versión:** 1.0
-**Fecha:** 2026-05-01 17:22:13
+**Fecha:** 2026-05-01 22:14:03
 **Generado por:** MoSCoW AI
 
 ---
@@ -177,20 +177,20 @@ El sistema ha sido diseñado para satisfacer las necesidades identificadas duran
 
 ## 6. Tabla de Priorización MoSCoW
 
-| ID | Descripción | Categoría MoSCoW | Score | Justificación |
-|----|-------------|-----------------|-------|---------------|
-| RF-02 | El sistema debe permitir al operador humano tomar ... | Should Have | 3.3 | Prioridad Should Have con score 3.3/5 debido a: alto impacto de negocio (4/5), b... |
-| RF-03 | El sistema debe enviar una notificación push al cl... | Should Have | 3.3 | Prioridad Should Have con score 3.3/5 debido a: alto impacto de negocio (4/5), b... |
-| RF-04 | El sistema debe reprogramar automáticamente la ent... | Should Have | 3.3 | Prioridad Should Have con score 3.3/5 debido a: alto impacto de negocio (4/5), b... |
-| RNF-01 | El sistema debe mantener un uptime del 99,99% para... | Should Have | 3.3 | Prioridad Should Have con score 3.3/5 debido a: alto impacto de negocio (4/5), b... |
-| RNF-02 | El sistema debe garantizar una comunicación entre ... | Should Have | 3.3 | Prioridad Should Have con score 3.3/5 debido a: alto impacto de negocio (4/5), b... |
-| RNF-03 | El sistema debe verificar la firma digital de cada... | Should Have | 3.3 | Prioridad Should Have con score 3.3/5 debido a: alto impacto de negocio (4/5), b... |
-| RNF-04 | El backend debe ser capaz de coordinar hasta 1,000... | Should Have | 3.3 | Prioridad Should Have con score 3.3/5 debido a: alto impacto de negocio (4/5), b... |
-| RF-05 | El sistema debe bloquear automáticamente todos los... | Should Have | 3.3 | Prioridad Should Have con score 3.3/5 debido a: alto impacto de negocio (4/5), b... |
-| RD-02 | El sistema debe rechazar cualquier ruta que compro... | Should Have | 3.3 | Prioridad Should Have con score 3.3/5 debido a: alto impacto de negocio (4/5), b... |
-| RF-01 | El sistema debe calcular la ruta de vuelo más cort... | Should Have | 3.05 | Prioridad Should Have con score 3.05/5 debido a: alto impacto de negocio (4/5), ... |
-| RNF-05 | El sistema no permitirá el despacho de pedidos que... | Could Have | 2.25 | Prioridad Could Have con score 2.25/5 debido a: alto esfuerzo requerido (4/5) |
-| RD-01 | El sistema debe evitar que los drones vuelen a una... | Could Have | 2.25 | Prioridad Could Have con score 2.25/5 debido a: alto esfuerzo requerido (4/5) |
+| ID | Descripción | Prioridad |
+|----|-------------|-----------|
+| RF-01 | El sistema debe calcular la ruta de vuelo más corta evitando... | Alta |
+| RF-02 | El sistema debe permitir al operador humano tomar el control... | Alta |
+| RF-03 | El sistema debe enviar una notificación push al cliente cuan... | Alta |
+| RF-04 | El sistema debe reprogramar automáticamente la entrega si lo... | Alta |
+| RNF-01 | El sistema debe mantener un uptime del 99,99% para evitar dr... | Alta |
+| RNF-02 | El sistema debe garantizar una comunicación entre el centro ... | Alta |
+| RNF-03 | El sistema debe verificar la firma digital de cada comando e... | Alta |
+| RNF-04 | El backend debe ser capaz de coordinar hasta 1,000 drones si... | Alta |
+| RNF-05 | El sistema no permitirá el despacho de pedidos que superen l... | Media |
+| RD-01 | El sistema debe evitar que los drones vuelen a una altura su... | Alta |
+| RF-05 | El sistema debe bloquear automáticamente todos los despegues... | Alta |
+| RD-02 | El sistema debe rechazar cualquier ruta que comprometa la au... | Alta |
 
 
 
@@ -322,4 +322,4 @@ El sistema ha sido diseñado para satisfacer las necesidades identificadas duran
 ---
 
 
-*Documento generado el 2026-05-01 17:22:13 · Sistema Multi-Agente de Ingeniería de Requisitos v1.0*
+*Documento generado el 2026-05-01 22:14:03 · Sistema Multi-Agente de Ingeniería de Requisitos v1.0*
