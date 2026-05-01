@@ -46,6 +46,23 @@ export default function useAuth() {
     }
   }, [handleLogin]);
 
+  const handleUpdateProfile = useCallback(async (updates) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await api.updateProfile(updates);
+      localStorage.setItem("token", data.token);
+      localStorage.setItem("user", JSON.stringify(data.user));
+      setUser(data.user);
+      return { ok: true };
+    } catch (e) {
+      setError(e.message);
+      return { ok: false, error: e.message };
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   const logout = useCallback(() => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
@@ -59,6 +76,7 @@ export default function useAuth() {
     isAuthenticated: !!user,
     login: handleLogin,
     register: handleRegister,
+    updateProfile: handleUpdateProfile,
     logout,
   };
 }

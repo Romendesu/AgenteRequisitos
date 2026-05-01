@@ -31,6 +31,12 @@ export const login = (email, password) =>
     body: JSON.stringify({ email, password }),
   });
 
+export const updateProfile = (updates) =>
+  request("/auth/profile", {
+    method: "PATCH",
+    body: JSON.stringify(updates),
+  });
+
 // ─── Proyectos ────────────────────────────────────────────────────────────────
 
 export const crearProyecto = (nombre, descripcion) =>

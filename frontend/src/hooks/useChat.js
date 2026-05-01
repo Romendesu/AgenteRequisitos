@@ -17,6 +17,7 @@ export default function useChat() {
   const [messages, setMessages] = useState([]);
   const [phase, setPhase] = useState(PHASE.SETUP);
   const [loading, setLoading] = useState(false);
+  const [loadingStep, setLoadingStep] = useState("");
   const [proyecto, setProyecto] = useState(null);
   const [projectId, setProjectId] = useState(null);
 
@@ -96,6 +97,12 @@ export default function useChat() {
   async function submit(texto) {
     push(msg("user", "text", { text: texto }));
     setLoading(true);
+    setLoadingStep("Agente Extractor — clasificando y redactando el requisito");
+
+    const timer = setTimeout(
+      () => setLoadingStep("Agente Validador — evaluando claridad y criterios de calidad"),
+      3000
+    );
 
     const textoConContexto = proyecto
       ? `Contexto del proyecto: "${proyecto.nombre}" — ${proyecto.descripcion}.\n\n${texto}`
@@ -114,9 +121,11 @@ export default function useChat() {
         isWarning: isDuplicate,
       }));
       setPhase(PHASE.COLLECTING);
+    } finally {
+      clearTimeout(timer);
+      setLoading(false);
+      setLoadingStep("");
     }
-
-    setLoading(false);
   }
 
   function continuar() {
@@ -127,19 +136,31 @@ export default function useChat() {
   async function finalizar() {
     setPhase(PHASE.GENERATING);
     setLoading(true);
-    push(msg("ai", "text", { text: "Priorizando y generando el documento de requisitos..." }));
 
     try {
+      // Paso 1: Priorizador
+      setLoadingStep("Agente Priorizador — calculando scores MoSCoW");
       const priorizacion = await api.priorizar(projectId);
+
+      // Paso 2: Writer — introducción
+      setLoadingStep("Agente Writer — generando introducción del documento con IA");
+      const writerTimer = setTimeout(
+        () => setLoadingStep("Agente Writer — renderizando Markdown, PDF y DOCX"),
+        4000
+      );
+
       const doc = await api.generarDocumento(projectId);
+      clearTimeout(writerTimer);
+
       push(msg("ai", "document", { priorizacion, doc, proyecto, projectId }));
       setPhase(PHASE.DONE);
     } catch (e) {
       push(msg("ai", "text", { text: `Error al generar el documento: ${e.message}` }));
       setPhase(PHASE.DONE);
+    } finally {
+      setLoading(false);
+      setLoadingStep("");
     }
-
-    setLoading(false);
   }
 
   function reset() {
@@ -149,12 +170,22 @@ export default function useChat() {
     setProjectId(null);
   }
 
+  const requisitos = messages
+    .filter((m) => m.type === "requirement")
+    .map((m) => m.requisito);
+
+  const moscowLabels =
+    messages.find((m) => m.type === "document")?.priorizacion?.moscow_labels ?? {};
+
   return {
     messages,
     phase,
     loading,
+    loadingStep,
     proyecto,
     projectId,
+    requisitos,
+    moscowLabels,
     submit,
     continuar,
     finalizar,

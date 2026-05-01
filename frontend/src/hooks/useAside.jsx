@@ -27,16 +27,14 @@ export default function useAside(initialValue = true) {
     let timeout;
 
     if (showAside && !isClosing.current) {
-      // Abrir: después de que se expanda el aside, mostrar texto
-      timeout = setTimeout(() => {
-        setShowText(true);
-      }, 300);
+      // Abrir: esperar ~60% de la transición de ancho (360ms) antes de mostrar texto
+      timeout = setTimeout(() => setShowText(true), 200);
     } else if (isClosing.current) {
-      // Cerrar: después de que desaparezca el texto, colapsar aside
+      // Cerrar: el texto tarda 210ms en desvanecerse (blur-fade), luego colapsamos
       timeout = setTimeout(() => {
         setShowAside(false);
         isClosing.current = false;
-      }, 200);
+      }, 190);
     }
 
     return () => clearTimeout(timeout);

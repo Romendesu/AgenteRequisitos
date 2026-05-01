@@ -13,13 +13,107 @@
     --prompt-response: "Roboto Mono", monospace;
 }
 
+/* ─── Sidebar Moderno ──────────────────────────────────────────────────────── */
+
+/* Animación slide-down suave */
+@keyframes slideDown {
+  0%   { opacity: 0; transform: translateY(-10px) scale(0.98); }
+  65%  { opacity: 1; transform: translateY(2px) scale(1.002); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+.animate-slide-down {
+  animation: slideDown 280ms cubic-bezier(0.34, 1.05, 0.64, 1) both;
+}
+
+/* Transición principal del sidebar */
+.sidebar {
+  transition: width 320ms ease-in-out,
+              padding-left 320ms ease-in-out,
+              padding-right 320ms ease-in-out,
+              box-shadow 320ms ease-in-out;
+  will-change: width, padding, box-shadow;
+}
+
+/* Texto del sidebar con blur-fade suave */
+.sidebar-text {
+  white-space: nowrap;
+  overflow: hidden;
+  transition: opacity 260ms ease-in-out,
+              transform 260ms ease-in-out,
+              filter 260ms ease-in-out;
+}
+
+.sidebar-text-visible {
+  opacity: 1;
+  transform: translateX(0);
+  filter: blur(0px);
+}
+
+.sidebar-text-hidden {
+  opacity: 0;
+  transform: translateX(-12px);
+  filter: blur(5px);
+  pointer-events: none;
+}
+
+/* Transiciones de botones */
+.sidebar button {
+  transition: all 200ms ease-in-out;
+}
+
 /* Fuentes de texto */
-h1, h2, h3, h4, h5, h6, .title {
-    font-family: var(--headline)
+h1, h2, h3, h4, h5, h6, .title { font-family: var(--headline) }
+p  { font-family: var(--label) }
+.prompt { font-family: var(--prompt-response) }
+
+/* ─── Modo claro ───────────────────────────────────────────────────────────── */
+[data-theme="light"] { color-scheme: light; }
+
+/* Fondos estructurales */
+[data-theme="light"] .bg-gray-950 { background-color: #f0f4f8 !important; }
+[data-theme="light"] .bg-gray-900 { background-color: #f8fafc !important; }
+[data-theme="light"] .bg-gray-800 { background-color: #ffffff !important; }
+[data-theme="light"] .bg-gray-700 { background-color: #e2e8f0 !important; }
+[data-theme="light"] .bg-gray-600 { background-color: #cbd5e1 !important; }
+
+/* Transparencias */
+[data-theme="light"] .bg-gray-900\/50 { background-color: rgba(248,250,252,0.85) !important; }
+[data-theme="light"] .bg-gray-800\/70 { background-color: rgba(255,255,255,0.9) !important; }
+[data-theme="light"] .bg-black\/70   { background-color: rgba(15,23,42,0.6)  !important; }
+
+/* Texto */
+[data-theme="light"] .text-white     { color: #0f172a !important; }
+[data-theme="light"] .text-gray-100  { color: #1e293b !important; }
+[data-theme="light"] .text-gray-200  { color: #334155 !important; }
+[data-theme="light"] .text-gray-300  { color: #475569 !important; }
+[data-theme="light"] .text-gray-400  { color: #64748b !important; }
+[data-theme="light"] .text-gray-500  { color: #94a3b8 !important; }
+[data-theme="light"] .text-gray-600  { color: #94a3b8 !important; }
+
+/* Bordes */
+[data-theme="light"] .border-gray-700 { border-color: #cbd5e1 !important; }
+[data-theme="light"] .border-gray-600 { border-color: #e2e8f0 !important; }
+[data-theme="light"] .border-gray-700\/50 { border-color: rgba(203,213,225,0.5) !important; }
+
+/* Hover sobre fondos oscuros */
+[data-theme="light"] .hover\:bg-gray-700:hover { background-color: #f1f5f9 !important; }
+[data-theme="light"] .hover\:bg-gray-600:hover  { background-color: #e2e8f0 !important; }
+
+/* Inputs */
+[data-theme="light"] input,
+[data-theme="light"] textarea {
+  background-color: #f8fafc !important;
+  color: #0f172a !important;
+  border-color: #cbd5e1 !important;
 }
-p {
-    font-family: var(--label)
-}
-.prompt{
-    font-family: var(--prompt-response)
-}
+[data-theme="light"] input::placeholder,
+[data-theme="light"] textarea::placeholder { color: #94a3b8 !important; }
+
+/* Código / pre */
+[data-theme="light"] pre,
+[data-theme="light"] code { background-color: #f1f5f9 !important; color: #1e293b !important; }
+
+/* Scrollbar */
+[data-theme="light"] ::-webkit-scrollbar-track { background: #f0f4f8; }
+[data-theme="light"] ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+[data-theme="light"] ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }

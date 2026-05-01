@@ -13,6 +13,7 @@ pydantic
 # Generación de documentos
 python-docx
 markdown2
+xhtml2pdf
 weasyprint
 openpyxl
 
