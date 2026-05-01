@@ -3,7 +3,6 @@ from langchain_ollama import ChatOllama
 from langchain_core.prompts import ChatPromptTemplate
 from pydantic import BaseModel, Field
 
-# 1. Definimos la clase aquí mismo
 class EvaluacionCalidad(BaseModel):
     puntuacion: int = Field(description="Puntuacion de 1 a 10")
     errores_detectados: list = Field(description="Lista de problemas encontrados")
@@ -12,7 +11,6 @@ class EvaluacionCalidad(BaseModel):
 
 class AgenteValidador:
     def __init__(self):
-        # format="json" es clave para que Ollama no devuelva texto extra
         self.llm = ChatOllama(model="llama3.2", temperature=0, format="json")
 
     def validar(self, requisito_texto):

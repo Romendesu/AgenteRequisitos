@@ -1,0 +1,316 @@
+{
+  "users": {
+    "1": {
+      "id": "4aeb8325-96d0-4198-9248-60e6f41ac11c",
+      "email": "rodrigojugon@gmail.com",
+      "username": "Romenchu",
+      "password_hash": "$2b$12$QCgpZedDVA/Kn.3OhmRMAuZmTec3eNQQ5tyAgngIemPWq74kinPoC",
+      "created_at": "2026-05-01T16:20:56.736978"
+    }
+  },
+  "projects": {
+    "2": {
+      "id": "69e47705-a524-486e-be2c-9e118775e56c",
+      "user_id": "4aeb8325-96d0-4198-9248-60e6f41ac11c",
+      "nombre": "SkyRoute Logistics",
+      "descripcion": "Sistema de gestión y despacho autónomo para una flota de drones de reparto en zonas urbanas densas. El sistema coordina desde la recepción del pedido en el almacén hasta el aterrizaje en \"Smart-Pads\" instalados en los domicilios de los clientes.",
+      "created_at": "2026-05-01T17:16:48.668241",
+      "status": "active"
+    }
+  },
+  "requirements": {
+    "13": {
+      "id": "RF-01",
+      "tipo": "Funcional",
+      "descripcion": "El sistema debe calcular la ruta de vuelo más corta evitando zonas de exclusión aérea (aeropuertos, zonas militares) mediante un algoritmo de planificación de rutas que considere las coordenadas geográficas de los aeropuertos y zonas militares.",
+      "prioridad": "Alta",
+      "criterio_aceptacion": "La ruta calculada debe ser la más corta en términos de distancia y tiempo, y no intersectar con ninguna zona de exclusión aérea.",
+      "project_id": "69e47705-a524-486e-be2c-9e118775e56c"
+    },
+    "14": {
+      "id": "RF-02",
+      "tipo": "Funcional",
+      "descripcion": "El sistema debe permitir al operador humano tomar el control remoto del dron en caso de emergencia mediante un 'Kill Switch' digital.",
+      "prioridad": "Alta",
+      "criterio_aceptacion": "La funcionalidad de 'Kill Switch' se activa correctamente y permite al operador humano recuperar el control del dron en menos de 5 segundos desde la activación.",
+      "project_id": "69e47705-a524-486e-be2c-9e118775e56c"
+    },
+    "15": {
+      "id": "RF-03",
+      "tipo": "Funcional",
+      "descripcion": "El sistema debe enviar una notificación push al cliente cuando el dron se encuentre a menos de 100 metros del Smart-Pad de destino.",
+      "prioridad": "Alta",
+      "criterio_aceptacion": "La aplicación móvil del cliente recibe la notificación push con un contenido que incluya la distancia exacta entre el dron y el Smart-Pad de destino, siendo menor a 100 metros.",
+      "project_id": "69e47705-a524-486e-be2c-9e118775e56c"
+    },
+    "16": {
+      "id": "RF-04",
+      "tipo": "Funcional",
+      "descripcion": "El sistema debe reprogramar automáticamente la entrega si los sensores del dron detectan obstáculos inesperados en la zona de aterrizaje.",
+      "prioridad": "Alta",
+      "criterio_aceptacion": "Los sensores del dron deben detectar al menos un obstáculo inesperado en la zona de aterrizaje y el sistema debe reprogramar la entrega dentro de 5 segundos.",
+      "project_id": "69e47705-a524-486e-be2c-9e118775e56c"
+    },
+    "17": {
+      "id": "RNF-01",
+      "tipo": "No Funcional",
+      "descripcion": "El sistema debe mantener un uptime del 99,99% para evitar drones varados en el aire.",
+      "prioridad": "Alta",
+      "criterio_aceptacion": "El sistema no puede tener más de 0,01% de tiempo de inactividad durante cualquier período de 30 días consecutivos.",
+      "project_id": "69e47705-a524-486e-be2c-9e118775e56c"
+    },
+    "18": {
+      "id": "RNF-02",
+      "tipo": "No Funcional",
+      "descripcion": "El sistema debe garantizar una comunicación entre el centro de control y el dron con un tiempo de respuesta inferior a 50ms.",
+      "prioridad": "Alta",
+      "criterio_aceptacion": "La medición del tiempo de respuesta de la comunicación entre el centro de control y el dron debe ser menor o igual a 50ms en al menos el 99% de las operaciones.",
+      "project_id": "69e47705-a524-486e-be2c-9e118775e56c"
+    },
+    "19": {
+      "id": "RNF-03",
+      "tipo": "No Funcional",
+      "descripcion": "El sistema debe verificar la firma digital de cada comando enviado al dron antes de su ejecución.",
+      "prioridad": "Alta",
+      "criterio_aceptacion": "La aplicación debe generar un error y no procesar el comando si la firma digital no es válida según los parámetros de seguridad configurados.",
+      "project_id": "69e47705-a524-486e-be2c-9e118775e56c"
+    },
+    "20": {
+      "id": "RNF-04",
+      "tipo": "No Funcional",
+      "descripcion": "El backend debe ser capaz de coordinar hasta 1,000 drones simultáneamente por cada sector de la ciudad.",
+      "prioridad": "Alta",
+      "criterio_aceptacion": "número de drones coordinados correctamente",
+      "project_id": "69e47705-a524-486e-be2c-9e118775e56c"
+    },
+    "21": {
+      "id": "RNF-05",
+      "tipo": "No Funcional",
+      "descripcion": "El sistema no permitirá el despacho de pedidos que superen los 5kg, excediendo la capacidad de sustentación de los motores actuales.",
+      "prioridad": "Media",
+      "criterio_aceptacion": "",
+      "project_id": "69e47705-a524-486e-be2c-9e118775e56c"
+    },
+    "22": {
+      "id": "RD-01",
+      "tipo": "Dominio",
+      "descripcion": "El sistema debe evitar que los drones vuelen a una altura superior a 120 metros (400 pies) para cumplir con la normativa de aviación civil local.",
+      "prioridad": "Alta",
+      "criterio_aceptacion": "La altitud máxima permitida para el vuelo de los drones es inferior o igual a 120 metros (400 pies).",
+      "project_id": "69e47705-a524-486e-be2c-9e118775e56c"
+    },
+    "23": {
+      "id": "RF-05",
+      "tipo": "Funcional",
+      "descripcion": "El sistema debe bloquear automáticamente todos los despegues si la velocidad del viento detectada por la estación meteorológica supera los 40 km/h.",
+      "prioridad": "Alta",
+      "criterio_aceptacion": "La velocidad del viento detectada por la estación meteorológica debe ser mayor o igual a 40 km/h para que el sistema bloquee todos los despegues.",
+      "project_id": "69e47705-a524-486e-be2c-9e118775e56c"
+    },
+    "24": {
+      "id": "RD-02",
+      "tipo": "Dominio",
+      "descripcion": "El sistema debe rechazar cualquier ruta que comprometa la autonomía de energía del dron.",
+      "prioridad": "Alta",
+      "criterio_aceptacion": "La batería del dron debe tener al menos un 20% de reserva para el aterrizaje de emergencia después de calcular el consumo estimado de la ruta.",
+      "project_id": "69e47705-a524-486e-be2c-9e118775e56c"
+    }
+  },
+  "priorizaciones": {
+    "2": {
+      "project_id": "69e47705-a524-486e-be2c-9e118775e56c",
+      "resultado": {
+        "metadata": {
+          "fecha": "2026-05-01 17:22:10",
+          "metodo": "MoSCoW Cuantificado con Scoring Multidimensional",
+          "pesos_dimensiones": {
+            "impacto_negocio": 0.4,
+            "riesgo_tecnico": 0.25,
+            "esfuerzo_estimado": 0.2,
+            "dependencias": 0.15
+          },
+          "umbrales": {
+            "must_have": 4.0,
+            "should_have": 3.0,
+            "could_have": 2.0
+          }
+        },
+        "requisitos_priorizados": [
+          {
+            "requisito_id": "RF-02",
+            "dimensiones": {
+              "impacto_negocio": 4,
+              "riesgo_tecnico": 3,
+              "esfuerzo_estimado": 2,
+              "dependencias": 1
+            },
+            "score_final": 3.3,
+            "categoria_moscow": "Should Have",
+            "justificacion": "Prioridad Should Have con score 3.3/5 debido a: alto impacto de negocio (4/5), bajo esfuerzo estimado (2/5)"
+          },
+          {
+            "requisito_id": "RF-03",
+            "dimensiones": {
+              "impacto_negocio": 4,
+              "riesgo_tecnico": 3,
+              "esfuerzo_estimado": 2,
+              "dependencias": 1
+            },
+            "score_final": 3.3,
+            "categoria_moscow": "Should Have",
+            "justificacion": "Prioridad Should Have con score 3.3/5 debido a: alto impacto de negocio (4/5), bajo esfuerzo estimado (2/5)"
+          },
+          {
+            "requisito_id": "RF-04",
+            "dimensiones": {
+              "impacto_negocio": 4,
+              "riesgo_tecnico": 3,
+              "esfuerzo_estimado": 2,
+              "dependencias": 1
+            },
+            "score_final": 3.3,
+            "categoria_moscow": "Should Have",
+            "justificacion": "Prioridad Should Have con score 3.3/5 debido a: alto impacto de negocio (4/5), bajo esfuerzo estimado (2/5)"
+          },
+          {
+            "requisito_id": "RNF-01",
+            "dimensiones": {
+              "impacto_negocio": 4,
+              "riesgo_tecnico": 3,
+              "esfuerzo_estimado": 2,
+              "dependencias": 1
+            },
+            "score_final": 3.3,
+            "categoria_moscow": "Should Have",
+            "justificacion": "Prioridad Should Have con score 3.3/5 debido a: alto impacto de negocio (4/5), bajo esfuerzo estimado (2/5)"
+          },
+          {
+            "requisito_id": "RNF-02",
+            "dimensiones": {
+              "impacto_negocio": 4,
+              "riesgo_tecnico": 3,
+              "esfuerzo_estimado": 2,
+              "dependencias": 1
+            },
+            "score_final": 3.3,
+            "categoria_moscow": "Should Have",
+            "justificacion": "Prioridad Should Have con score 3.3/5 debido a: alto impacto de negocio (4/5), bajo esfuerzo estimado (2/5)"
+          },
+          {
+            "requisito_id": "RNF-03",
+            "dimensiones": {
+              "impacto_negocio": 4,
+              "riesgo_tecnico": 3,
+              "esfuerzo_estimado": 2,
+              "dependencias": 1
+            },
+            "score_final": 3.3,
+            "categoria_moscow": "Should Have",
+            "justificacion": "Prioridad Should Have con score 3.3/5 debido a: alto impacto de negocio (4/5), bajo esfuerzo estimado (2/5)"
+          },
+          {
+            "requisito_id": "RNF-04",
+            "dimensiones": {
+              "impacto_negocio": 4,
+              "riesgo_tecnico": 3,
+              "esfuerzo_estimado": 2,
+              "dependencias": 1
+            },
+            "score_final": 3.3,
+            "categoria_moscow": "Should Have",
+            "justificacion": "Prioridad Should Have con score 3.3/5 debido a: alto impacto de negocio (4/5), bajo esfuerzo estimado (2/5)"
+          },
+          {
+            "requisito_id": "RF-05",
+            "dimensiones": {
+              "impacto_negocio": 4,
+              "riesgo_tecnico": 3,
+              "esfuerzo_estimado": 2,
+              "dependencias": 1
+            },
+            "score_final": 3.3,
+            "categoria_moscow": "Should Have",
+            "justificacion": "Prioridad Should Have con score 3.3/5 debido a: alto impacto de negocio (4/5), bajo esfuerzo estimado (2/5)"
+          },
+          {
+            "requisito_id": "RD-02",
+            "dimensiones": {
+              "impacto_negocio": 4,
+              "riesgo_tecnico": 3,
+              "esfuerzo_estimado": 2,
+              "dependencias": 1
+            },
+            "score_final": 3.3,
+            "categoria_moscow": "Should Have",
+            "justificacion": "Prioridad Should Have con score 3.3/5 debido a: alto impacto de negocio (4/5), bajo esfuerzo estimado (2/5)"
+          },
+          {
+            "requisito_id": "RF-01",
+            "dimensiones": {
+              "impacto_negocio": 4,
+              "riesgo_tecnico": 3,
+              "esfuerzo_estimado": 4,
+              "dependencias": 2
+            },
+            "score_final": 3.05,
+            "categoria_moscow": "Should Have",
+            "justificacion": "Prioridad Should Have con score 3.05/5 debido a: alto impacto de negocio (4/5), alto esfuerzo requerido (4/5)"
+          },
+          {
+            "requisito_id": "RNF-05",
+            "dimensiones": {
+              "impacto_negocio": 3,
+              "riesgo_tecnico": 2,
+              "esfuerzo_estimado": 4,
+              "dependencias": 1
+            },
+            "score_final": 2.25,
+            "categoria_moscow": "Could Have",
+            "justificacion": "Prioridad Could Have con score 2.25/5 debido a: alto esfuerzo requerido (4/5)"
+          },
+          {
+            "requisito_id": "RD-01",
+            "dimensiones": {
+              "impacto_negocio": 3,
+              "riesgo_tecnico": 2,
+              "esfuerzo_estimado": 4,
+              "dependencias": 1
+            },
+            "score_final": 2.25,
+            "categoria_moscow": "Could Have",
+            "justificacion": "Prioridad Could Have con score 2.25/5 debido a: alto esfuerzo requerido (4/5)"
+          }
+        ],
+        "moscow_labels": {
+          "RF-01": "Should Have",
+          "RF-02": "Should Have",
+          "RF-03": "Should Have",
+          "RF-04": "Should Have",
+          "RNF-01": "Should Have",
+          "RNF-02": "Should Have",
+          "RNF-03": "Should Have",
+          "RNF-04": "Should Have",
+          "RNF-05": "Could Have",
+          "RD-01": "Could Have",
+          "RF-05": "Should Have",
+          "RD-02": "Should Have"
+        },
+        "conflict_report": [],
+        "priority_scores": {
+          "RF-01": 3.05,
+          "RF-02": 3.3,
+          "RF-03": 3.3,
+          "RF-04": 3.3,
+          "RNF-01": 3.3,
+          "RNF-02": 3.3,
+          "RNF-03": 3.3,
+          "RNF-04": 3.3,
+          "RNF-05": 2.25,
+          "RD-01": 2.25,
+          "RF-05": 3.3,
+          "RD-02": 3.3
+        }
+      }
+    }
+  }
+}

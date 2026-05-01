@@ -1,0 +1,21 @@
+{
+    "metadata": {
+        "fecha": "2026-05-01 11:49:53"
+    },
+    "requisito": {
+        "id": "RF-02",
+        "tipo": "No Funcional",
+        "descripcion": "La responsividad del sistema para todo tipo de dispositivos",
+        "prioridad": "Alta",
+        "criterio_aceptacion": "Verificar que el sistema responda correctamente en diferentes dispositivos y navegadores"
+    },
+    "analisis": {
+        "puntuacion": 6,
+        "errores_detectados": [
+            "Falta de compatibilidad con dispositivos móviles",
+            "No se considera la resolución del dispositivo en la gestión de la imagen"
+        ],
+        "sugerencias_mejora": "Asegurarse de que el sistema sea compatible con todos los tipos de dispositivos, incluyendo dispositivos móviles y tabletas, y considerar la resolución del dispositivo en la gestión de la imagen para mejorar la calidad de la imagen capturada.",
+        "es_valido": false
+    }
+}

@@ -1,8 +1,24 @@
-# Intaker
-spacy
-es-core-news-sm @ https://github.com/explosion/spacy-models/releases/download/es_core_news_sm-3.7.0/es_core_news_sm-3.7.0-py3-none-any.whl
-
-
-# Comunicación con el frontend
+# Web framework
 fastapi
-uvicorn
+uvicorn[standard]
+jinja2
+
+# LLM / LangChain
+langchain-ollama
+langchain-core
+
+# Validación de datos
+pydantic
+
+# Generación de documentos
+python-docx
+markdown2
+weasyprint
+openpyxl
+
+# Base de datos
+tinydb
+
+# Autenticación
+bcrypt
+PyJWT

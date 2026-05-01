@@ -1,0 +1,20 @@
+{
+    "metadata": {
+        "fecha": "2026-05-01 11:49:19"
+    },
+    "requisito": {
+        "id": "RF-01",
+        "tipo": "No Funcional",
+        "descripcion": "La interfaz tiene que ser bonita",
+        "prioridad": "Media",
+        "criterio_aceptacion": "Como se evalúa la estética de la interfaz y se cumple con los estándares de diseño"
+    },
+    "analisis": {
+        "puntuacion": 3,
+        "errores_detectados": [
+            "Falta de claridad en la descripción del requisito"
+        ],
+        "sugerencias_mejora": "La interfaz debe ser clara, concisa y fácil de usar",
+        "es_valido": false
+    }
+}

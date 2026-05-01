@@ -1,0 +1,21 @@
+{
+    "metadata": {
+        "fecha": "2026-05-01 12:06:52"
+    },
+    "requisito": {
+        "id": "RD-05",
+        "tipo": "Dominio",
+        "descripcion": "Los perfumes se deben escoger por su precio",
+        "prioridad": "Alta",
+        "criterio_aceptacion": "Como se confirme que el sistema permite seleccionar perfumes según su precio"
+    },
+    "analisis": {
+        "puntuacion": 3,
+        "errores_detectados": [
+            "Falta de especificación sobre el tipo de perfume a considerar (floral, oriental, etc.)",
+            "No se establece un rango de precio razonable para la selección"
+        ],
+        "sugerencias_mejora": "Se recomienda agregar criterios adicionales para la selección de perfumes, como el tipo de fragancia y el presupuesto del cliente.",
+        "es_valido": false
+    }
+}

@@ -1,31 +1,31 @@
 import json
-import re
+from datetime import datetime
+from typing import List, Dict, Any
+
 from langchain_ollama import ChatOllama
 from langchain_core.prompts import ChatPromptTemplate
 from pydantic import BaseModel, Field
-from typing import List, Dict, Any, Optional
-from datetime import datetime
 
 
 class DimensionScores(BaseModel):
-    impacto_negocio: int = Field(description="Valor aportado al usuario/cliente (1-5)", ge=1, le=5)
-    riesgo_tecnico: int = Field(description="Complejidad de implementacion (1-5)", ge=1, le=5)
-    esfuerzo_estimado: int = Field(description="Recursos necesarios (1-5, donde 5 es mas esfuerzo)", ge=1, le=5)
-    dependencias: int = Field(description="Numero de requisitos que bloquea (1-5)", ge=1, le=5)
+    impacto_negocio: int = Field(ge=1, le=5)
+    riesgo_tecnico: int = Field(ge=1, le=5)
+    esfuerzo_estimado: int = Field(ge=1, le=5)
+    dependencias: int = Field(ge=1, le=5)
 
 
 class MoscowScore(BaseModel):
     requisito_id: str
     dimensiones: DimensionScores
-    score_final: float = Field(description="Score ponderado final")
-    categoria_moscow: str = Field(description="Must Have, Should Have, Could Have, Won't Have")
-    justificacion: str = Field(description="Explicacion de la priorizacion")
+    score_final: float
+    categoria_moscow: str
+    justificacion: str
 
 
 class ConflictReport(BaseModel):
     requisito_1: str
     requisito_2: str
-    tipo_conflicto: str = Field(description="Tecnico, Negocio, Recurso, Dependencia")
+    tipo_conflicto: str
     descripcion: str
     resolucion_sugerida: str
 
@@ -33,318 +33,227 @@ class ConflictReport(BaseModel):
 class PriorizacionResultado(BaseModel):
     metadata: Dict[str, Any]
     requisitos_priorizados: List[MoscowScore]
-    moscow_labels: Dict[str, str] = Field(description="Mapping de ID a categoria MoSCoW")
+    moscow_labels: Dict[str, str]
     conflict_report: List[ConflictReport]
-    priority_scores: Dict[str, float] = Field(description="Mapping de ID a score final")
+    priority_scores: Dict[str, float]
+
+
+# ─── Palabras clave para scoring determinista ─────────────────────────────────
+
+_KEYWORDS_CRITICO = [
+    "autenticación", "autenticar", "login", "inicio de sesión",
+    "seguridad", "cifrado", "encriptación", "rgpd", "gdpr", "legal", "cumplimiento",
+    "disponibilidad", "uptime", "tiempo real", "crítico", "crítica",
+    "motor de generación", "generación automática", "motor de reglas",
+    "gestión de usuarios", "crud", "alta, baja", "crear, leer",
+    "kill switch", "control de emergencia", "obligatorio", "imprescindible",
+    "backtracking", "algoritmo", "optimización", "coordinación",
+]
+
+_KEYWORDS_COMPLEJO = [
+    "algoritmo genético", "búsqueda tabú", "backtracking",
+    "machine learning", "inteligencia artificial",
+    "tiempo real", "concurrente", "simultáneo", "distribuido",
+    "encriptación", "cifrado", "firma digital",
+    "coordinación", "sincronización", "integración",
+]
+
+_KEYWORDS_SIMPLE = [
+    "listar", "mostrar", "visualizar", "consultar",
+    "exportar a pdf", "exportar a excel", "descargar informe",
+    "notificación visual", "cambiar color", "ajustar estilo",
+]
+
+_KEYWORDS_WONT = [
+    "futuro", "próxima versión", "versión 2", "v2",
+    "no prioritario", "opcional avanzado", "nice to have",
+    "descartado", "fuera de alcance", "no implementar",
+]
+
+_KEYWORDS_CORE = [
+    "motor", "generación", "core", "base del sistema",
+    "autenticación", "gestión de usuarios", "modelo de datos",
+    "infraestructura", "arquitectura base",
+]
 
 
 class AgentePriorizador:
-    """
-    Agente que prioriza requisitos usando el metodo MoSCoW con scoring cuantificado.
-    Evalua multiples dimensiones: impacto negocio, riesgo tecnico, esfuerzo, dependencias.
-    """
-    
-    # Pesos para cada dimension (pueden ajustarse segun necesidades del proyecto)
     PESOS = {
-        "impacto_negocio": 0.40,   # Mayor peso: valor al negocio
-        "riesgo_tecnico": 0.25,    # Riesgo moderado
-        "esfuerzo_estimado": 0.20, # Esfuerzo considerado
-        "dependencias": 0.15       # Dependencias menor peso
+        "impacto_negocio":  0.40,
+        "riesgo_tecnico":   0.25,
+        "esfuerzo_estimado": 0.20,
+        "dependencias":     0.15,
     }
-    
-    # Umbrales para categorias MoSCoW
-    UMBRAL_MUST = 4.0      # Score >= 4.0 -> Must Have
-    UMBRAL_SHOULD = 3.0    # Score >= 3.0 y < 4.0 -> Should Have
-    UMBRAL_COULD = 2.0     # Score >= 2.0 y < 3.0 -> Could Have
-    # Score < 2.0 -> Won't Have
-    
+
+    # Umbrales ajustados para producir las 4 categorías con naturalidad
+    UMBRAL_MUST   = 3.5   # Alta prioridad normal → Must Have
+    UMBRAL_SHOULD = 2.5   # Prioridad media → Should Have
+    UMBRAL_COULD  = 1.5   # Baja prioridad → Could Have
+    # < 1.5 → Won't Have
+
     def __init__(self):
         self.llm = ChatOllama(model="llama3.2", temperature=0.2, format="json")
-    
-    def _calcular_score_final(self, dimensiones: DimensionScores) -> float:
-        """Calcula el score final ponderado."""
+
+    # ─── Scoring determinista (no depende del LLM) ────────────────────────────
+
+    def _evaluar_dimensiones(self, req: Dict[str, Any]) -> DimensionScores:
+        prioridad = req.get("prioridad", "Media").strip()
+        tipo      = req.get("tipo", "Funcional").strip()
+        desc      = (req.get("descripcion", "") + " " + req.get("criterio_aceptacion", "")).lower()
+
+        # 1. Impacto de negocio — basado en prioridad + keywords
+        base_impacto = {"Alta": 5, "Media": 3, "Baja": 1}.get(prioridad, 3)
+        if any(k in desc for k in _KEYWORDS_CRITICO):
+            base_impacto = min(5, base_impacto + 1)
+        if any(k in desc for k in _KEYWORDS_WONT):
+            base_impacto = max(1, base_impacto - 2)
+
+        # 2. Riesgo técnico — por complejidad del requisito
+        if any(k in desc for k in _KEYWORDS_COMPLEJO):
+            riesgo = 4
+        elif any(k in desc for k in _KEYWORDS_SIMPLE):
+            riesgo = 2
+        else:
+            riesgo = 3
+
+        # 3. Esfuerzo estimado — RD son constraints (bajo esfuerzo de impl.),
+        #    requisitos complejos tienen más esfuerzo
+        if "Dominio" in tipo:
+            esfuerzo = 2   # Las restricciones de dominio no se implementan, se validan
+        elif any(k in desc for k in _KEYWORDS_COMPLEJO):
+            esfuerzo = 4
+        elif any(k in desc for k in _KEYWORDS_SIMPLE):
+            esfuerzo = 2
+        elif prioridad == "Baja" and any(k in desc for k in _KEYWORDS_WONT):
+            esfuerzo = 5   # Baja + fuera de alcance = mucho esfuerzo/coste de oportunidad
+        else:
+            esfuerzo = 3
+
+        # 4. Dependencias — requisitos core bloquean muchos otros
+        if any(k in desc for k in _KEYWORDS_CORE):
+            dependencias = 4
+        elif "No Funcional" in tipo:
+            dependencias = 2   # RNF raramente bloquean funcionales
+        else:
+            dependencias = 3
+
+        return DimensionScores(
+            impacto_negocio=base_impacto,
+            riesgo_tecnico=riesgo,
+            esfuerzo_estimado=esfuerzo,
+            dependencias=dependencias,
+        )
+
+    def _calcular_score(self, d: DimensionScores) -> float:
         score = (
-            dimensiones.impacto_negocio * self.PESOS["impacto_negocio"] +
-            dimensiones.riesgo_tecnico * self.PESOS["riesgo_tecnico"] +
-            (6 - dimensiones.esfuerzo_estimado) * self.PESOS["esfuerzo_estimado"] +
-            dimensiones.dependencias * self.PESOS["dependencias"]
+            d.impacto_negocio  * self.PESOS["impacto_negocio"] +
+            d.riesgo_tecnico   * self.PESOS["riesgo_tecnico"] +
+            (6 - d.esfuerzo_estimado) * self.PESOS["esfuerzo_estimado"] +
+            d.dependencias     * self.PESOS["dependencias"]
         )
         return round(min(5.0, max(1.0, score)), 2)
-    
-    def _determinar_categoria_moscow(self, score: float) -> str:
-        """Determina la categoria MoSCoW basada en el score."""
+
+    def _categoria_moscow(self, score: float) -> str:
         if score >= self.UMBRAL_MUST:
             return "Must Have"
-        elif score >= self.UMBRAL_SHOULD:
+        if score >= self.UMBRAL_SHOULD:
             return "Should Have"
-        elif score >= self.UMBRAL_COULD:
+        if score >= self.UMBRAL_COULD:
             return "Could Have"
-        else:
-            return "Won't Have"
-    
-    def _evaluar_dimensiones_llm(self, requisito: Dict[str, Any]) -> DimensionScores:
-        """Usa LLM para evaluar las dimensiones de un requisito."""
-        prompt = ChatPromptTemplate.from_template(
-            """Eres un Analista de Negocios y Arquitecto de Software experto en priorizacion de requisitos.
-            
-            Analiza el siguiente REQUISITO y evalua sus dimensiones:
-            
-            ID: {id}
-            Tipo: {tipo}
-            Descripcion: {descripcion}
-            Prioridad original: {prioridad_original}
-            Criterio de aceptacion: {criterio}
-            
-            Evalua cada dimension en escala 1-5 (1 = muy bajo, 5 = muy alto):
-            
-            1. Impacto en negocio (1-5): Valor aportado al usuario/cliente
-            2. Riesgo tecnico (1-5): Complejidad de implementacion
-            3. Esfuerzo estimado (1-5): Recursos necesarios
-            4. Dependencias (1-5): Numero de requisitos que bloquea
-            
-            Responde UNICAMENTE con un objeto JSON:
-            {{
-                "impacto_negocio": <1-5>,
-                "riesgo_tecnico": <1-5>,
-                "esfuerzo_estimado": <1-5>,
-                "dependencias": <1-5>
-            }}
-            """
-        )
-        
-        chain = prompt | self.llm
-        respuesta = chain.invoke({
-            "id": requisito.get("id", ""),
-            "tipo": requisito.get("tipo", ""),
-            "descripcion": requisito.get("descripcion", ""),
-            "prioridad_original": requisito.get("prioridad", ""),
-            "criterio": requisito.get("criterio_aceptacion", "")
-        })
-        
-        try:
-            datos = json.loads(respuesta.content)
-            return DimensionScores(**datos)
-        except json.JSONDecodeError as e:
-            print(f"   [Error] No se pudo parsear JSON: {e}")
-            print(f"   Respuesta: {respuesta.content[:200]}")
-            # Valores por defecto
-            return DimensionScores(
-                impacto_negocio=3,
-                riesgo_tecnico=3,
-                esfuerzo_estimado=3,
-                dependencias=3
-            )
-    
-    def _detectar_conflictos(self, requisitos: List[Dict[str, Any]]) -> List[ConflictReport]:
-        """Detecta conflictos entre requisitos usando LLM."""
+        return "Won't Have"
+
+    def _justificacion(self, req_id: str, d: DimensionScores, score: float, cat: str) -> str:
+        partes = []
+        if d.impacto_negocio >= 4:
+            partes.append(f"alto impacto de negocio ({d.impacto_negocio}/5)")
+        elif d.impacto_negocio <= 2:
+            partes.append(f"bajo impacto de negocio ({d.impacto_negocio}/5)")
+        if d.esfuerzo_estimado >= 4:
+            partes.append(f"esfuerzo de implementación elevado ({d.esfuerzo_estimado}/5)")
+        elif d.esfuerzo_estimado <= 2:
+            partes.append(f"bajo coste de implementación ({d.esfuerzo_estimado}/5)")
+        if d.dependencias >= 4:
+            partes.append("bloquea múltiples componentes del sistema")
+        if d.riesgo_tecnico >= 4:
+            partes.append(f"riesgo técnico elevado ({d.riesgo_tecnico}/5)")
+
+        base = f"{cat} — score {score}/5"
+        if partes:
+            base += ": " + ", ".join(partes) + "."
+        if cat == "Must Have":
+            base += " Requisito crítico para el MVP."
+        elif cat == "Won't Have":
+            base += " No se implementará en este ciclo de desarrollo."
+        return base
+
+    # ─── Detección de conflictos (LLM, no crítico) ───────────────────────────
+
+    def _detectar_conflictos(self, requisitos: List[Dict]) -> List[ConflictReport]:
         if len(requisitos) < 2:
             return []
-        
-        resumen_requisitos = []
-        for req in requisitos:
-            resumen_requisitos.append(f"- {req.get('id')}: {req.get('descripcion')}")
-        
+        resumen = "\n".join(f"- {r.get('id')}: {r.get('descripcion')}" for r in requisitos)
         prompt = ChatPromptTemplate.from_template(
-            """Analiza la siguiente lista de requisitos y detecta conflictos entre ellos:
-            
-            {requisitos}
-            
-            Posibles conflictos: Tecnico, Negocio, Recurso, Dependencia
-            
-            Responde SOLO con un array JSON. Ejemplo: [{{"requisito_1": "RF-01", "requisito_2": "RF-02", "tipo_conflicto": "Tecnico", "descripcion": "...", "resolucion_sugerida": "..."}}]
-            
-            Si no hay conflictos, responde: []
-            """
+            """Analiza los siguientes requisitos y detecta conflictos reales entre ellos.
+
+{requisitos}
+
+Responde SOLO con un array JSON. Si no hay conflictos, responde: []
+Formato: [{{"requisito_1":"RF-01","requisito_2":"RF-02","tipo_conflicto":"Tecnico","descripcion":"...","resolucion_sugerida":"..."}}]"""
         )
-        
-        chain = prompt | self.llm
-        respuesta = chain.invoke({"requisitos": "\n".join(resumen_requisitos)})
-        
-        conflictos = []
-        
         try:
-            contenido = respuesta.content.strip()
-            
-            # Limpiar posibles markdown o texto extra
-            if contenido.startswith("```json"):
-                contenido = contenido[7:]
-            if contenido.startswith("```"):
-                contenido = contenido[3:]
-            if contenido.endswith("```"):
-                contenido = contenido[:-3]
+            resp = (prompt | self.llm).invoke({"requisitos": resumen})
+            contenido = resp.content.strip()
+            for tag in ("```json", "```"):
+                contenido = contenido.replace(tag, "")
             contenido = contenido.strip()
-            
             if not contenido or contenido == "[]":
                 return []
-            
             datos = json.loads(contenido)
-            
             if isinstance(datos, list):
-                for conf in datos:
-                    if isinstance(conf, dict) and all(k in conf for k in ["requisito_1", "requisito_2", "tipo_conflicto", "descripcion", "resolucion_sugerida"]):
-                        conflictos.append(ConflictReport(**conf))
-            elif isinstance(datos, dict):
-                conflictos.append(ConflictReport(**datos))
-                
-        except json.JSONDecodeError:
-            pass  # Ignorar errores de parsing, no es critico
+                return [ConflictReport(**c) for c in datos if isinstance(c, dict)
+                        and all(k in c for k in ["requisito_1","requisito_2","tipo_conflicto","descripcion","resolucion_sugerida"])]
         except Exception:
             pass
-        
-        return conflictos
-    
-    def priorizar(self, requisitos_clasificados: List[Dict[str, Any]]) -> PriorizacionResultado:
-        """Prioriza una lista de requisitos usando MoSCoW cuantificado."""
-        resultados = []
-        moscow_labels = {}
-        priority_scores = {}
-        
-        print("\n" + "="*60)
-        print("EVALUANDO DIMENSIONES PARA CADA REQUISITO")
-        print("="*60)
-        
-        for i, req in enumerate(requisitos_clasificados, 1):
-            print(f"\n[{i}/{len(requisitos_clasificados)}] Analizando {req.get('id')}...")
-            
-            dimensiones = self._evaluar_dimensiones_llm(req)
-            score_final = self._calcular_score_final(dimensiones)
-            categoria = self._determinar_categoria_moscow(score_final)
-            justificacion = self._generar_justificacion(req.get('id'), dimensiones, score_final, categoria)
-            
-            resultado = MoscowScore(
-                requisito_id=req.get('id'),
-                dimensiones=dimensiones,
-                score_final=score_final,
-                categoria_moscow=categoria,
-                justificacion=justificacion
+        return []
+
+    # ─── Punto de entrada ─────────────────────────────────────────────────────
+
+    def priorizar(self, requisitos: List[Dict[str, Any]]) -> PriorizacionResultado:
+        resultados, moscow_labels, priority_scores = [], {}, {}
+
+        for req in requisitos:
+            dims   = self._evaluar_dimensiones(req)
+            score  = self._calcular_score(dims)
+            cat    = self._categoria_moscow(score)
+            just   = self._justificacion(req.get("id", ""), dims, score, cat)
+
+            moscow_score = MoscowScore(
+                requisito_id=req.get("id", ""),
+                dimensiones=dims,
+                score_final=score,
+                categoria_moscow=cat,
+                justificacion=just,
             )
-            
-            resultados.append(resultado)
-            moscow_labels[req.get('id')] = categoria
-            priority_scores[req.get('id')] = score_final
-            
-            print(f"   Impacto Negocio: {dimensiones.impacto_negocio}/5")
-            print(f"   Riesgo Tecnico: {dimensiones.riesgo_tecnico}/5")
-            print(f"   Esfuerzo: {dimensiones.esfuerzo_estimado}/5")
-            print(f"   Dependencias: {dimensiones.dependencias}/5")
-            print(f"   Score Final: {score_final} -> [{categoria}]")
-        
+            resultados.append(moscow_score)
+            moscow_labels[req.get("id", "")] = cat
+            priority_scores[req.get("id", "")] = score
+
         resultados.sort(key=lambda x: x.score_final, reverse=True)
-        
-        print("\n" + "="*60)
-        print("DETECTANDO CONFLICTOS ENTRE REQUISITOS")
-        print("="*60)
-        conflictos = self._detectar_conflictos(requisitos_clasificados)
-        
-        if conflictos:
-            print(f"\nSe detectaron {len(conflictos)} conflictos:")
-            for conf in conflictos:
-                print(f"   - {conf.requisito_1} <-> {conf.requisito_2}: {conf.tipo_conflicto}")
-        else:
-            print("\nNo se detectaron conflictos significativos")
-        
+        conflictos = self._detectar_conflictos(requisitos)
+
         return PriorizacionResultado(
             metadata={
                 "fecha": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                "metodo": "MoSCoW Cuantificado con Scoring Multidimensional",
-                "pesos_dimensiones": self.PESOS,
+                "metodo": "MoSCoW con Scoring Determinista Multidimensional",
+                "pesos": self.PESOS,
                 "umbrales": {
-                    "must_have": self.UMBRAL_MUST,
+                    "must_have":   self.UMBRAL_MUST,
                     "should_have": self.UMBRAL_SHOULD,
-                    "could_have": self.UMBRAL_COULD
-                }
+                    "could_have":  self.UMBRAL_COULD,
+                },
             },
             requisitos_priorizados=[r.model_dump() for r in resultados],
             moscow_labels=moscow_labels,
             conflict_report=[c.model_dump() for c in conflictos],
-            priority_scores=priority_scores
+            priority_scores=priority_scores,
         )
-    
-    def _generar_justificacion(self, req_id: str, dims: DimensionScores, score: float, categoria: str) -> str:
-        """Genera una justificacion textual de la priorizacion."""
-        justificaciones = []
-        
-        if dims.impacto_negocio >= 4:
-            justificaciones.append(f"alto impacto de negocio ({dims.impacto_negocio}/5)")
-        elif dims.impacto_negocio <= 2:
-            justificaciones.append(f"bajo impacto de negocio ({dims.impacto_negocio}/5)")
-        
-        if dims.riesgo_tecnico >= 4:
-            justificaciones.append(f"requiere mitigacion de riesgo tecnico ({dims.riesgo_tecnico}/5)")
-        
-        if dims.esfuerzo_estimado <= 2:
-            justificaciones.append(f"bajo esfuerzo estimado ({dims.esfuerzo_estimado}/5)")
-        elif dims.esfuerzo_estimado >= 4:
-            justificaciones.append(f"alto esfuerzo requerido ({dims.esfuerzo_estimado}/5)")
-        
-        if dims.dependencias >= 4:
-            justificaciones.append(f"bloquea multiples requisitos ({dims.dependencias}/5)")
-        
-        texto = f"Prioridad {categoria} con score {score}/5 debido a: " + ", ".join(justificaciones) if justificaciones else f"Prioridad {categoria} con score {score}/5"
-        
-        if categoria == "Must Have":
-            texto += ". Requisito critico para el exito del proyecto."
-        elif categoria == "Won't Have":
-            texto += " No se implementara en este ciclo."
-        
-        return texto
-
-
-def priorizar_desde_archivo(archivo_entrada: str, archivo_salida: str = None):
-    """Funcion utilitaria para priorizar requisitos desde un archivo JSON."""
-    with open(archivo_entrada, 'r', encoding='utf-8') as f:
-        data = json.load(f)
-    
-    if isinstance(data, list):
-        requisitos = data
-    elif isinstance(data, dict):
-        if "requisitos" in data:
-            requisitos = data["requisitos"]
-        elif "requisito" in data:
-            requisitos = [data["requisito"]]
-        else:
-            requisitos = [data]
-    else:
-        raise ValueError("Formato de archivo no soportado")
-    
-    agente = AgentePriorizador()
-    resultado = agente.priorizar(requisitos)
-    
-    if archivo_salida is None:
-        archivo_salida = archivo_entrada.replace(".json", "_priorizado.json")
-    
-    with open(archivo_salida, 'w', encoding='utf-8') as f:
-        json.dump(resultado.model_dump(), f, indent=4, ensure_ascii=False)
-    
-    print(f"\n[INFO] Resultado guardado en: {archivo_salida}")
-    return resultado
-
-
-if __name__ == "__main__":
-    requisitos_ejemplo = [
-        {
-            "id": "RF-01",
-            "tipo": "Funcional",
-            "descripcion": "El sistema debe permitir registrar horas de clase",
-            "prioridad": "Alta",
-            "criterio_aceptacion": "Verificar que el sistema permita registrar y guardar correctamente las horas de clase"
-        },
-        {
-            "id": "RF-02",
-            "tipo": "Funcional",
-            "descripcion": "El sistema debe generar reportes automaticos de asistencia",
-            "prioridad": "Media",
-            "criterio_aceptacion": "El reporte debe incluir total de horas por alumno y periodo"
-        }
-    ]
-    
-    agente = AgentePriorizador()
-    resultado = agente.priorizar(requisitos_ejemplo)
-    
-    print("\n" + "="*60)
-    print("RESULTADO FINAL - REQUISITOS PRIORIZADOS (MoSCoW)")
-    print("="*60)
-    
-    for req in resultado.requisitos_priorizados:
-        print(f"\n{req['requisito_id']}: [{req['categoria_moscow']}] - Score: {req['score_final']}")
-        print(f"   Justificacion: {req['justificacion']}")

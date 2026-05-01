@@ -1,0 +1,18 @@
+{
+    "metadata": {
+        "fecha": "2026-05-01 11:57:43"
+    },
+    "requisito": {
+        "id": "RD-01",
+        "tipo": "Dominio",
+        "descripcion": "El proyecto sirve para realizar una interfaz de usuario y generar automaticamente horarios para la UCJC.",
+        "prioridad": "Alta",
+        "criterio_aceptacion": "Verificar que el sistema genere los horarios de manera automática y coherente con las necesidades del proyecto"
+    },
+    "analisis": {
+        "puntuacion": 8,
+        "errores_detectados": [],
+        "sugerencias_mejora": "La descripción del requisito es clara y concisa, pero podría incluir más detalles sobre la funcionalidad de la interfaz de usuario y cómo se generan los horarios.",
+        "es_valido": true
+    }
+}

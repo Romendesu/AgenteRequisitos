@@ -1,562 +1,362 @@
 import json
-import os
-from datetime import datetime
-from typing import List, Optional, Dict, Any
-from fastapi import FastAPI, HTTPException, BackgroundTasks
-from fastapi.responses import FileResponse, JSONResponse
-from pydantic import BaseModel, Field
 from pathlib import Path
+from typing import Optional, Dict, Any
 
-from src.agents.extractor import AgenteRequisitos
-from src.agents.validator import AgenteValidador
-from src.agents.prioritizer import AgentePriorizador
-from src.agents.writer import AgenteWriter
+from fastapi import FastAPI, HTTPException, Depends
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from pydantic import BaseModel, Field
 
-# ============================================================================
-# Modelos Pydantic para la API
-# ============================================================================
+import database as db
+import auth
+from agents import AgenteRequisitos, AgenteValidador, AgentePriorizador, AgenteWriter
+
+# ─── Modelos Pydantic ─────────────────────────────────────────────────────────
+
+class RegisterRequest(BaseModel):
+    email: str
+    username: str
+    password: str
+
+class LoginRequest(BaseModel):
+    email: str
+    password: str
+
+class ProjectRequest(BaseModel):
+    nombre: str = Field(..., min_length=1)
+    descripcion: str = Field("", description="Propósito del proyecto")
 
 class RequisitoRequest(BaseModel):
-    texto: str = Field(..., description="Texto del requisito en lenguaje natural", min_length=1)
+    texto: str = Field(..., min_length=1)
 
-class RequisitoResponse(BaseModel):
-    id: str
-    tipo: str
-    descripcion: str
-    prioridad: str
-    criterio_aceptacion: str
-    calidad: Dict[str, Any]
 
-class PriorizacionRequest(BaseModel):
-    requisitos_ids: Optional[List[str]] = Field(None, description="IDs específicos a priorizar (todos si es None)")
+# ─── Gestor de proyecto ───────────────────────────────────────────────────────
 
-class DocumentoRequest(BaseModel):
-    formato: str = Field("md", description="Formato: md, pdf, docx")
-    incluir_todos: bool = Field(True, description="Incluir todos los requisitos o solo priorizados")
+class GestorProyecto:
+    """Encapsula la lógica de agentes para un proyecto concreto."""
 
-# ============================================================================
-# Clase principal de la API
-# ============================================================================
-
-class GestorRequisitosAPI:
-    def __init__(self):
+    def __init__(self, project_id: str):
+        self.project_id = project_id
         self.extractor = AgenteRequisitos()
         self.validador = AgenteValidador()
         self.priorizador = AgentePriorizador()
         self.writer = AgenteWriter()
-        self.requisitos_procesados: Dict[str, Dict] = {}
-        self.priorizacion_resultado: Optional[Dict] = None
-        
-        # Asegurar directorio de outputs
-        os.makedirs("outputs", exist_ok=True)
-        self._cargar_requisitos_guardados()
-    
-    def _cargar_requisitos_guardados(self):
-        """Carga requisitos previamente guardados en archivos."""
-        if not os.path.exists("outputs"):
-            return
-        
-        for archivo in os.listdir("outputs"):
-            if archivo.startswith("requisito_") and archivo.endswith(".json"):
-                ruta = os.path.join("outputs", archivo)
-                try:
-                    with open(ruta, 'r', encoding='utf-8') as f:
-                        data = json.load(f)
-                        if "requisito" in data:
-                            req = data["requisito"]
-                            self.requisitos_procesados[req["id"]] = req
-                except Exception:
-                    pass
-    
-    def _guardar_requisito(self, requisito: Dict, analisis: Dict) -> str:
-        """Guarda un requisito individual."""
-        output_data = {
-            "metadata": {"fecha": datetime.now().strftime("%Y-%m-%d %H:%M:%S")},
-            "requisito": requisito,
-            "analisis": analisis
-        }
-        
-        nombre_archivo = f"outputs/requisito_{requisito['id']}.json"
-        with open(nombre_archivo, "w", encoding="utf-8") as f:
-            json.dump(output_data, f, indent=4, ensure_ascii=False)
-        
-        return nombre_archivo
-    
-    def procesar_requisito(self, texto: str) -> Dict[str, Any]:
-        """Procesa un nuevo requisito."""
-        # Extraer requisito
-        req = self.extractor.procesar_texto(texto)
-        
-        # Validar calidad
-        analisis = self.validador.validar(req.descripcion)
-        
-        # Convertir a dict
-        req_dict = req.model_dump()
-        analisis_dict = analisis.model_dump()
-        
-        # Guardar
-        archivo = self._guardar_requisito(req_dict, analisis_dict)
-        
-        # Almacenar en memoria
-        self.requisitos_procesados[req.id] = req_dict
-        
-        return {
-            "requisito": req_dict,
-            "calidad": analisis_dict,
-            "archivo": archivo
-        }
-    
-    def obtener_requisitos(self) -> List[Dict]:
-        """Obtiene todos los requisitos."""
-        return list(self.requisitos_procesados.values())
-    
-    def obtener_requisito(self, req_id: str) -> Optional[Dict]:
-        """Obtiene un requisito por ID."""
-        return self.requisitos_procesados.get(req_id)
-    
-    def eliminar_requisito(self, req_id: str) -> bool:
-        """Elimina un requisito."""
-        if req_id not in self.requisitos_procesados:
-            return False
-        
-        # Eliminar archivo
-        archivo = f"outputs/requisito_{req_id}.json"
-        if os.path.exists(archivo):
-            os.remove(archivo)
-        
-        # Eliminar de memoria
-        del self.requisitos_procesados[req_id]
-        
-        # Limpiar priorización si existe
-        self.priorizacion_resultado = None
-        
-        return True
-    
-    def eliminar_todos_requisitos(self) -> int:
-        """Elimina todos los requisitos."""
-        cantidad = len(self.requisitos_procesados)
-        
-        # Eliminar archivos
-        for req_id in list(self.requisitos_procesados.keys()):
-            archivo = f"outputs/requisito_{req_id}.json"
-            if os.path.exists(archivo):
-                os.remove(archivo)
-        
-        # Limpiar memoria
-        self.requisitos_procesados.clear()
-        self.priorizacion_resultado = None
-        
-        return cantidad
-    
-    def priorizar_requisitos(self, ids_especificos: Optional[List[str]] = None) -> Dict:
-        """Prioriza los requisitos usando MoSCoW."""
-        if not self.requisitos_procesados:
-            raise ValueError("No hay requisitos para priorizar")
-        
-        # Filtrar por IDs si se especifican
-        if ids_especificos:
-            requisitos = [self.requisitos_procesados[rid] for rid in ids_especificos if rid in self.requisitos_procesados]
-        else:
-            requisitos = list(self.requisitos_procesados.values())
-        
-        if not requisitos:
-            raise ValueError("No se encontraron los requisitos especificados")
-        
-        # Realizar priorización
-        resultado = self.priorizador.priorizar(requisitos)
-        self.priorizacion_resultado = resultado.model_dump()
-        
-        # Guardar resultado
-        archivo = "outputs/requisitos_priorizados.json"
-        with open(archivo, "w", encoding="utf-8") as f:
-            json.dump(self.priorizacion_resultado, f, indent=4, ensure_ascii=False)
-        
-        return self.priorizacion_resultado
-    
-    def obtener_priorizacion(self) -> Optional[Dict]:
-        """Obtiene el último resultado de priorización."""
-        return self.priorizacion_resultado
-    
-    def generar_documento(self, background_tasks: BackgroundTasks) -> Dict:
-        """Genera documento formal de requisitos."""
-        if not self.requisitos_procesados:
-            raise ValueError("No hay requisitos para generar documento")
-        
-        # Crear archivo temporal con requisitos actuales
-        temp_file = "outputs/temp_requisitos.json"
-        with open(temp_file, "w", encoding="utf-8") as f:
-            json.dump(list(self.requisitos_procesados.values()), f, indent=4, ensure_ascii=False)
-        
-        # Generar documento
-        resultado = self.writer.generar_documento(temp_file)
-        
-        # Limpiar archivo temporal
-        if os.path.exists(temp_file):
-            os.remove(temp_file)
-        
-        return resultado
-    
-    def descargar_documento(self, formato: str) -> Optional[str]:
-        """Obtiene la ruta del documento en el formato solicitado."""
-        formato = formato.lower()
-        
-        ruta_base = "outputs/documento_requisitos"
-        
-        mapeo = {
-            "md": f"{ruta_base}/documento_requisitos.md",
-            "pdf": f"{ruta_base}/documento_requisitos.pdf",
-            "docx": f"{ruta_base}/documento_requisitos.docx"
-        }
-        
-        if formato not in mapeo:
-            return None
-        
-        ruta = mapeo[formato]
-        if os.path.exists(ruta):
-            return ruta
-        
+        self.output_dir = Path(f"outputs/{project_id}")
+        self.output_dir.mkdir(parents=True, exist_ok=True)
+
+    def _next_id(self, tipo: str) -> str:
+        existing = db.get_requirements(self.project_id)
+        prefix = "RNF" if "No Funcional" in tipo else ("RD" if "Dominio" in tipo else "RF")
+        count = sum(1 for r in existing if r.get("id", "").startswith(prefix + "-"))
+        return f"{prefix}-{count + 1:02d}"
+
+    def _es_duplicado(self, descripcion: str) -> Optional[str]:
+        existentes = db.get_requirements(self.project_id)
+        desc_norm = descripcion.lower().strip()
+        for r in existentes:
+            existente_norm = r.get("descripcion", "").lower().strip()
+            # Similitud simple: si comparten más del 80% de palabras significativas
+            palabras_nueva = set(desc_norm.split())
+            palabras_existente = set(existente_norm.split())
+            if not palabras_nueva or not palabras_existente:
+                continue
+            comunes = palabras_nueva & palabras_existente
+            similitud = len(comunes) / max(len(palabras_nueva), len(palabras_existente))
+            if similitud >= 0.75:
+                return r.get("id")
         return None
 
+    def procesar_requisito(self, texto: str) -> Dict[str, Any]:
+        req = self.extractor.procesar_texto(texto)
 
-# ============================================================================
-# Inicialización de FastAPI
-# ============================================================================
+        duplicado_id = self._es_duplicado(req.descripcion)
+        if duplicado_id:
+            raise ValueError(f"DUPLICADO:{duplicado_id}")
 
-app = FastAPI(
-    title="API de Gestión de Requisitos con IA",
-    description="""
-    Sistema de gestión de requisitos de software utilizando IA.
-    
-    Características:
-    - Extracción automática de requisitos desde lenguaje natural
-    - Validación de calidad según ISO/IEC 29148
-    - Priorización cuantificada usando metodología MoSCoW
-    - Generación de documentación formal (MD, PDF, DOCX)
-    """,
-    version="1.0.0"
+        analisis = self.validador.validar(req.descripcion)
+
+        req_dict = req.model_dump()
+        req_dict["id"] = self._next_id(req_dict["tipo"])
+
+        db.save_requirement(self.project_id, req_dict)
+
+        return {"requisito": req_dict, "calidad": analisis.model_dump()}
+
+    def priorizar(self) -> Dict:
+        requisitos = db.get_requirements(self.project_id)
+        if not requisitos:
+            raise ValueError("No hay requisitos para priorizar")
+
+        resultado = self.priorizador.priorizar(requisitos)
+        resultado_dict = resultado.model_dump()
+        db.save_priorizacion(self.project_id, resultado_dict)
+
+        # Persistir JSON en disco también
+        (self.output_dir / "priorizacion.json").write_text(
+            json.dumps(resultado_dict, indent=2, ensure_ascii=False), encoding="utf-8"
+        )
+        return resultado_dict
+
+    def generar_documento(self) -> Dict:
+        requisitos = db.get_requirements(self.project_id)
+        if not requisitos:
+            raise ValueError("No hay requisitos para generar el documento")
+
+        priorizacion = db.get_priorizacion(self.project_id)
+
+        temp = self.output_dir / "temp_requisitos.json"
+        temp.write_text(
+            json.dumps({"requisitos": requisitos}, indent=2, ensure_ascii=False),
+            encoding="utf-8",
+        )
+
+        priorizacion_path = str(self.output_dir / "priorizacion.json") if priorizacion else None
+        resultado = self.writer.generar_documento(str(temp), priorizacion_path)
+        temp.unlink(missing_ok=True)
+
+        descargar = {
+            "md": "/documento/md" if resultado.get("md") else None,
+            "pdf": "/documento/pdf" if resultado.get("pdf") else None,
+            "docx": "/documento/docx" if resultado.get("docx") else None,
+        }
+        return {"message": "Documento generado", "descargar": descargar}
+
+    def ruta_documento(self, formato: str) -> Optional[str]:
+        candidatos = {
+            "md": self.output_dir / "documento_requisitos" / "documento_requisitos.md",
+            "pdf": self.output_dir / "documento_requisitos" / "documento_requisitos.pdf",
+            "docx": self.output_dir / "documento_requisitos" / "documento_requisitos.docx",
+        }
+        # Fallback a ruta global del writer (que usa outputs/documento_requisitos/)
+        global_candidatos = {
+            "md": Path("outputs/documento_requisitos/documento_requisitos.md"),
+            "pdf": Path("outputs/documento_requisitos/documento_requisitos.pdf"),
+            "docx": Path("outputs/documento_requisitos/documento_requisitos.docx"),
+        }
+        ruta = candidatos.get(formato)
+        if ruta and ruta.exists():
+            return str(ruta)
+        ruta = global_candidatos.get(formato)
+        if ruta and ruta.exists():
+            return str(ruta)
+        return None
+
+    def preview_documento(self) -> str:
+        ruta = self.ruta_documento("md")
+        if not ruta:
+            raise FileNotFoundError("Documento no generado todavía")
+        return Path(ruta).read_text(encoding="utf-8")
+
+
+# ─── FastAPI ──────────────────────────────────────────────────────────────────
+
+app = FastAPI(title="MoSCoW AI API", version="2.0.0")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
-# Instancia global del gestor
-gestor = GestorRequisitosAPI()
+# ─── Auth ─────────────────────────────────────────────────────────────────────
+
+@app.post("/auth/register", status_code=201, tags=["Auth"])
+def register(req: RegisterRequest):
+    if not auth.validate_email(req.email):
+        raise HTTPException(400, "Email inválido")
+    errors = auth.validate_password(req.password)
+    if errors:
+        raise HTTPException(400, "; ".join(errors))
+    if not req.username.strip():
+        raise HTTPException(400, "El nombre de usuario no puede estar vacío")
+    if db.get_user_by_email(req.email):
+        raise HTTPException(409, "Ya existe una cuenta con ese email")
+
+    user = db.create_user(
+        email=req.email,
+        username=req.username.strip(),
+        password_hash=auth.hash_password(req.password),
+    )
+    return {"id": user["id"], "email": user["email"], "username": user["username"]}
 
 
-# ============================================================================
-# Endpoints
-# ============================================================================
+@app.post("/auth/login", tags=["Auth"])
+def login(req: LoginRequest):
+    user = db.get_user_by_email(req.email)
+    if not user or not auth.verify_password(req.password, user["password_hash"]):
+        raise HTTPException(401, "Email o contraseña incorrectos")
 
-@app.get("/", tags=["Health"])
-async def root():
-    """Verificar estado de la API."""
+    token = auth.create_token(user["id"], user["email"], user["username"])
     return {
-        "status": "online",
-        "version": "1.0.0",
-        "requisitos_cargados": len(gestor.requisitos_procesados),
-        "priorizacion_disponible": gestor.priorizacion_resultado is not None,
-        "endpoints": [
-            "POST /requisitos",
-            "GET /requisitos",
-            "GET /requisitos/{id}",
-            "DELETE /requisitos/{id}",
-            "DELETE /requisitos",
-            "POST /requisitos/priorizar",
-            "GET /priorizacion",
-            "POST /documento",
-            "GET /documento/{formato}"
-        ]
+        "token": token,
+        "user": {"id": user["id"], "email": user["email"], "username": user["username"]},
     }
 
 
-@app.post("/requisitos", response_model=Dict, status_code=201, tags=["Requisitos"])
-async def crear_requisito(request: RequisitoRequest):
-    """
-    Procesa un nuevo requisito a partir de texto en lenguaje natural.
-    
-    - Extrae automáticamente tipo, descripción, prioridad y criterio de aceptación
-    - Valida la calidad del requisito
-    - Guarda el resultado en archivo JSON
-    """
+# ─── Proyectos ────────────────────────────────────────────────────────────────
+
+@app.post("/projects", status_code=201, tags=["Proyectos"])
+def crear_proyecto(req: ProjectRequest, user=Depends(auth.get_current_user)):
+    project = db.create_project(user["id"], req.nombre, req.descripcion)
+    return project
+
+
+@app.get("/projects", tags=["Proyectos"])
+def listar_proyectos(user=Depends(auth.get_current_user)):
+    return db.get_projects_by_user(user["id"])
+
+
+@app.delete("/projects/{project_id}", tags=["Proyectos"])
+def eliminar_proyecto(project_id: str, user=Depends(auth.get_current_user)):
+    _verificar_proyecto(project_id, user["id"])
+    if not db.delete_project(project_id):
+        raise HTTPException(404, "Proyecto no encontrado")
+    return {"message": "Proyecto eliminado"}
+
+
+@app.get("/projects/{project_id}", tags=["Proyectos"])
+def obtener_proyecto(project_id: str, user=Depends(auth.get_current_user)):
+    project = _verificar_proyecto(project_id, user["id"])
+    requisitos = db.get_requirements(project_id)
+    priorizacion = db.get_priorizacion(project_id)
+    return {**project, "total_requisitos": len(requisitos), "priorizado": priorizacion is not None}
+
+
+# ─── Requisitos ───────────────────────────────────────────────────────────────
+
+@app.post("/projects/{project_id}/requisitos", status_code=201, tags=["Requisitos"])
+def crear_requisito(project_id: str, req: RequisitoRequest, user=Depends(auth.get_current_user)):
+    _verificar_proyecto(project_id, user["id"])
     try:
-        resultado = gestor.procesar_requisito(request.texto)
-        return resultado
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error procesando requisito: {str(e)}")
-
-
-@app.get("/requisitos", tags=["Requisitos"])
-async def listar_requisitos():
-    """Obtiene todos los requisitos procesados."""
-    requisitos = gestor.obtener_requisitos()
-    return {
-        "total": len(requisitos),
-        "requisitos": requisitos
-    }
-
-
-@app.get("/requisitos/{req_id}", tags=["Requisitos"])
-async def obtener_requisito(req_id: str):
-    """Obtiene un requisito específico por su ID."""
-    requisito = gestor.obtener_requisito(req_id)
-    if not requisito:
-        raise HTTPException(status_code=404, detail=f"Requisito {req_id} no encontrado")
-    return requisito
-
-
-@app.delete("/requisitos/{req_id}", tags=["Requisitos"])
-async def eliminar_requisito(req_id: str):
-    """Elimina un requisito específico."""
-    eliminado = gestor.eliminar_requisito(req_id)
-    if not eliminado:
-        raise HTTPException(status_code=404, detail=f"Requisito {req_id} no encontrado")
-    return {"message": f"Requisito {req_id} eliminado correctamente"}
-
-
-@app.delete("/requisitos", tags=["Requisitos"])
-async def eliminar_todos_requisitos():
-    """Elimina todos los requisitos."""
-    cantidad = gestor.eliminar_todos_requisitos()
-    return {"message": f"Se eliminaron {cantidad} requisitos"}
-
-
-@app.post("/requisitos/priorizar", tags=["Priorización"])
-async def priorizar_requisitos(request: Optional[PriorizacionRequest] = None):
-    """
-    Prioriza los requisitos usando metodología MoSCoW cuantificada.
-    
-    Evalúa 4 dimensiones:
-    - Impacto en negocio (40%)
-    - Riesgo técnico (25%)
-    - Esfuerzo estimado (20%)
-    - Dependencias (15%)
-    """
-    try:
-        ids = request.requisitos_ids if request else None
-        resultado = gestor.priorizar_requisitos(ids)
-        return resultado
+        gestor = GestorProyecto(project_id)
+        return gestor.procesar_requisito(req.texto)
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        msg = str(e)
+        if msg.startswith("DUPLICADO:"):
+            dup_id = msg.split(":", 1)[1]
+            raise HTTPException(409, f"Este requisito ya existe o es muy similar al requisito {dup_id}")
+        raise HTTPException(400, msg)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error en priorización: {str(e)}")
+        raise HTTPException(500, f"Error procesando requisito: {e}")
 
 
-@app.get("/priorizacion", tags=["Priorización"])
-async def obtener_priorizacion():
-    """Obtiene el último resultado de priorización."""
-    resultado = gestor.obtener_priorizacion()
+@app.get("/projects/{project_id}/requisitos", tags=["Requisitos"])
+def listar_requisitos(project_id: str, user=Depends(auth.get_current_user)):
+    _verificar_proyecto(project_id, user["id"])
+    requisitos = db.get_requirements(project_id)
+    return {"total": len(requisitos), "requisitos": requisitos}
+
+
+@app.delete("/projects/{project_id}/requisitos/{req_id}", tags=["Requisitos"])
+def eliminar_requisito(project_id: str, req_id: str, user=Depends(auth.get_current_user)):
+    _verificar_proyecto(project_id, user["id"])
+    if not db.delete_requirement(project_id, req_id):
+        raise HTTPException(404, f"Requisito {req_id} no encontrado")
+    return {"message": f"Requisito {req_id} eliminado"}
+
+
+@app.delete("/projects/{project_id}/requisitos", tags=["Requisitos"])
+def eliminar_todos(project_id: str, user=Depends(auth.get_current_user)):
+    _verificar_proyecto(project_id, user["id"])
+    n = db.delete_all_requirements(project_id)
+    return {"message": f"Se eliminaron {n} requisitos"}
+
+
+# ─── Priorización ─────────────────────────────────────────────────────────────
+
+@app.post("/projects/{project_id}/priorizar", tags=["Priorización"])
+def priorizar(project_id: str, user=Depends(auth.get_current_user)):
+    _verificar_proyecto(project_id, user["id"])
+    try:
+        gestor = GestorProyecto(project_id)
+        return gestor.priorizar()
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    except Exception as e:
+        raise HTTPException(500, f"Error en priorización: {e}")
+
+
+@app.get("/projects/{project_id}/priorizacion", tags=["Priorización"])
+def obtener_priorizacion(project_id: str, user=Depends(auth.get_current_user)):
+    _verificar_proyecto(project_id, user["id"])
+    resultado = db.get_priorizacion(project_id)
     if not resultado:
-        raise HTTPException(status_code=404, detail="No hay una priorización disponible. Ejecuta POST /requisitos/priorizar primero")
+        raise HTTPException(404, "No hay priorización disponible")
     return resultado
 
 
-@app.post("/documento", tags=["Documentación"])
-async def generar_documento(request: DocumentoRequest = DocumentoRequest()):
-    """
-    Genera documento formal de requisitos en formato MD, PDF o DOCX.
-    """
+# ─── Documentación ────────────────────────────────────────────────────────────
+
+@app.post("/projects/{project_id}/documento", tags=["Documentación"])
+def generar_documento(project_id: str, user=Depends(auth.get_current_user)):
+    _verificar_proyecto(project_id, user["id"])
     try:
-        # Verificar que hay requisitos
-        if not gestor.requisitos_procesados:
-            raise HTTPException(status_code=400, detail="No hay requisitos para generar documento")
-        
-        # Crear archivo temporal con la estructura que espera el writer
-        temp_file = "outputs/temp_requisitos.json"
-        
-        # Estructura que espera el writer (con campo "requisitos")
-        data_con_estructura = {
-            "requisitos": list(gestor.requisitos_procesados.values())
-        }
-        
-        with open(temp_file, "w", encoding="utf-8") as f:
-            json.dump(data_con_estructura, f, indent=4, ensure_ascii=False)
-        
-        # Generar documento (esto genera MD, PDF y DOCX)
-        resultado = gestor.writer.generar_documento(temp_file)
-        
-        # Limpiar archivo temporal
-        if os.path.exists(temp_file):
-            os.remove(temp_file)
-        
-        # Verificar si el formato solicitado está disponible
-        formato = request.formato.lower()
-        
-        if formato == "md":
-            ruta = resultado.get("md")
-            if ruta and os.path.exists(ruta):
-                return {
-                    "message": f"Documento en formato Markdown generado",
-                    "ruta": ruta,
-                    "descargar": f"/documento/md"
-                }
-        elif formato == "pdf":
-            ruta = resultado.get("pdf")
-            if ruta and os.path.exists(ruta):
-                return {
-                    "message": f"Documento en formato PDF generado",
-                    "ruta": ruta,
-                    "descargar": f"/documento/pdf"
-                }
-        elif formato == "docx":
-            ruta = resultado.get("docx")
-            if ruta and os.path.exists(ruta):
-                return {
-                    "message": f"Documento en formato DOCX generado",
-                    "ruta": ruta,
-                    "descargar": f"/documento/docx"
-                }
-        
-        # Si el formato no está disponible, devolver todos
-        return {
-            "message": "Documentos generados exitosamente",
-            "archivos": {k: v for k, v in resultado.items() if v},
-            "descargar": {
-                "md": "/documento/md" if resultado.get("md") else None,
-                "pdf": "/documento/pdf" if resultado.get("pdf") else None,
-                "docx": "/documento/docx" if resultado.get("docx") else None
-            }
-        }
+        gestor = GestorProyecto(project_id)
+        return gestor.generar_documento()
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(400, str(e))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error generando documento: {str(e)}")
+        raise HTTPException(500, f"Error generando documento: {e}")
 
 
-@app.get("/documento/{formato}", tags=["Documentación"])
-async def descargar_documento(formato: str):
-    """
-    Descarga el documento generado en el formato especificado.
-    
-    Formatos soportados: md, pdf, docx
-    """
+@app.get("/projects/{project_id}/documento/preview", tags=["Documentación"])
+def preview_documento(project_id: str, user=Depends(auth.get_current_user)):
+    _verificar_proyecto(project_id, user["id"])
+    try:
+        gestor = GestorProyecto(project_id)
+        return {"contenido": gestor.preview_documento()}
+    except FileNotFoundError as e:
+        raise HTTPException(404, str(e))
+
+
+@app.get("/projects/{project_id}/documento/{formato}", tags=["Documentación"])
+def descargar_documento(project_id: str, formato: str, user=Depends(auth.get_current_user)):
+    _verificar_proyecto(project_id, user["id"])
     formato = formato.lower()
-    
     if formato not in ["md", "pdf", "docx"]:
-        raise HTTPException(status_code=400, detail=f"Formato no soportado: {formato}. Usa: md, pdf, docx")
-    
-    # Primero intentar obtener documento existente
-    ruta = gestor.descargar_documento(formato)
-    
-    # Si no existe, generarlo automáticamente
+        raise HTTPException(400, f"Formato no soportado: {formato}. Usa: md, pdf, docx")
+
+    gestor = GestorProyecto(project_id)
+    ruta = gestor.ruta_documento(formato)
+
     if not ruta:
+        # Intentar generar si no existe
         try:
-            # Generar documento con los requisitos actuales
-            temp_file = "outputs/temp_requisitos.json"
-            data_con_estructura = {
-                "requisitos": list(gestor.requisitos_procesados.values())
-            }
-            
-            with open(temp_file, "w", encoding="utf-8") as f:
-                json.dump(data_con_estructura, f, indent=4, ensure_ascii=False)
-            
-            resultado = gestor.writer.generar_documento(temp_file)
-            
-            if os.path.exists(temp_file):
-                os.remove(temp_file)
-            
-            ruta = resultado.get(formato)
-            
+            gestor.generar_documento()
+            ruta = gestor.ruta_documento(formato)
         except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Error generando documento: {str(e)}")
-    
-    if not ruta or not os.path.exists(ruta):
-        raise HTTPException(
-            status_code=404, 
-            detail=f"Documento en formato {formato} no encontrado. Primero ejecuta POST /documento"
-        )
-    
-    # Definir content-type
+            raise HTTPException(500, f"Error generando documento: {e}")
+
+    if not ruta:
+        raise HTTPException(404, f"Documento {formato} no disponible. Genera el documento primero.")
+
     content_types = {
         "md": "text/markdown",
         "pdf": "application/pdf",
-        "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     }
-    
-    nombre_archivo = f"documento_requisitos.{formato}"
-    
-    return FileResponse(
-        path=ruta,
-        media_type=content_types.get(formato, "application/octet-stream"),
-        filename=nombre_archivo
-    )
+    return FileResponse(path=ruta, media_type=content_types[formato], filename=f"requisitos.{formato}")
 
 
-# ============================================================================
-# Endpoints adicionales (estadísticas y resúmenes)
-# ============================================================================
+# ─── Utilidades internas ──────────────────────────────────────────────────────
 
-@app.get("/estadisticas", tags=["Estadísticas"])
-async def obtener_estadisticas():
-    """Obtiene estadísticas de los requisitos procesados."""
-    requisitos = gestor.obtener_requisitos()
-    
-    tipos = {}
-    prioridades = {}
-    
-    for req in requisitos:
-        tipo = req.get("tipo", "Desconocido")
-        prioridad = req.get("prioridad", "Desconocida")
-        tipos[tipo] = tipos.get(tipo, 0) + 1
-        prioridades[prioridad] = prioridades.get(prioridad, 0) + 1
-    
-    return {
-        "total_requisitos": len(requisitos),
-        "por_tipo": tipos,
-        "por_prioridad_inicial": prioridades,
-        "priorizacion_disponible": gestor.priorizacion_resultado is not None
-    }
+def _verificar_proyecto(project_id: str, user_id: str) -> dict:
+    project = db.get_project(project_id)
+    if not project:
+        raise HTTPException(404, "Proyecto no encontrado")
+    if project["user_id"] != user_id:
+        raise HTTPException(403, "No tienes acceso a este proyecto")
+    return project
 
 
-@app.get("/resumen", tags=["Estadísticas"])
-async def obtener_resumen():
-    """Obtiene un resumen ejecutivo de la priorización."""
-    if not gestor.priorizacion_resultado:
-        raise HTTPException(status_code=404, detail="No hay priorización disponible")
-    
-    resultado = gestor.priorizacion_resultado
-    
-    categorias = {"Must Have": 0, "Should Have": 0, "Could Have": 0, "Won't Have": 0}
-    
-    for req in resultado.get("requisitos_priorizados", []):
-        cat = req.get("categoria_moscow", "")
-        if cat in categorias:
-            categorias[cat] += 1
-    
-    # Calcular score promedio
-    scores = [req.get("score_final", 0) for req in resultado.get("requisitos_priorizados", [])]
-    score_promedio = sum(scores) / len(scores) if scores else 0
-    
-    return {
-        "resumen_moscow": categorias,
-        "score_promedio": round(score_promedio, 2),
-        "cantidad_conflictos": len(resultado.get("conflict_report", [])),
-        "fecha_priorizacion": resultado.get("metadata", {}).get("fecha"),
-        "metodo": resultado.get("metadata", {}).get("metodo")
-    }
+# ─── Health check ─────────────────────────────────────────────────────────────
 
+@app.get("/", tags=["Health"])
+def root():
+    return {"status": "online", "version": "2.0.0"}
 
-# ============================================================================
-# Script principal (para ejecución directa)
-# ============================================================================
 
 if __name__ == "__main__":
     import uvicorn
-    
-    print("=" * 60)
-    print("API DE GESTION DE REQUISITOS CON IA")
-    print("=" * 60)
-    print("\nEjecutando servidor FastAPI...")
-    print("Documentación interactiva: http://localhost:8000/docs")
-    print("Documentación alternativa: http://localhost:8000/redoc")
-    print("\nEndpoints disponibles:")
-    print("  POST   /requisitos           - Procesar nuevo requisito")
-    print("  GET    /requisitos           - Listar todos los requisitos")
-    print("  GET    /requisitos/{id}      - Obtener requisito específico")
-    print("  DELETE /requisitos/{id}      - Eliminar requisito")
-    print("  DELETE /requisitos           - Eliminar todos")
-    print("  POST   /requisitos/priorizar - Priorizar requisitos (MoSCoW)")
-    print("  GET    /priorizacion         - Ver resultado de priorización")
-    print("  POST   /documento            - Generar documento formal")
-    print("  GET    /documento/{formato}  - Descargar documento")
-    print("  GET    /estadisticas         - Ver estadísticas")
-    print("  GET    /resumen              - Ver resumen ejecutivo")
-    print("\n" + "=" * 60)
-    
     uvicorn.run(app, host="0.0.0.0", port=8000)
