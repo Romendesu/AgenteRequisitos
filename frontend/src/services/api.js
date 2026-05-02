@@ -4,18 +4,32 @@ function getToken() {
   return localStorage.getItem("token");
 }
 
+function clearSession() {
+  localStorage.removeItem("token");
+  localStorage.removeItem("user");
+}
+
 async function request(path, options = {}) {
   const token = getToken();
   const headers = { "Content-Type": "application/json" };
   if (token) headers["Authorization"] = `Bearer ${token}`;
 
   const res = await fetch(`${BASE}${path}`, { headers, ...options });
+
+  if (res.status === 401) {
+    clearSession();
+    window.location.href = "/login";
+    return;
+  }
+
   if (!res.ok) {
     const detail = await res.json().catch(() => ({}));
     throw new Error(detail.detail || `Error ${res.status}`);
   }
   return res.json();
 }
+
+export const verificarSesion = () => request("/auth/me");
 
 // ─── Auth ────────────────────────────────────────────────────────────────────
 
@@ -71,8 +85,11 @@ export const obtenerPriorizacion = (projectId) =>
 
 // ─── Documento ────────────────────────────────────────────────────────────────
 
-export const generarDocumento = (projectId) =>
-  request(`/projects/${projectId}/documento`, { method: "POST" });
+export const generarDocumento = (projectId, stakeholders = "") =>
+  request(`/projects/${projectId}/documento`, {
+    method: "POST",
+    body: JSON.stringify({ stakeholders }),
+  });
 
 export const obtenerPreview = (projectId) =>
   request(`/projects/${projectId}/documento/preview`);

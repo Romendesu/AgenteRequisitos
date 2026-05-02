@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import * as api from "../services/api";
 
 function loadUser() {
@@ -14,6 +14,13 @@ export default function useAuth() {
   const [user, setUser] = useState(loadUser);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
+
+  // Valida el token contra el backend al iniciar. Si falló (BD reseteada,
+  // token expirado, etc.), el interceptor 401 de api.js limpia la sesión.
+  useEffect(() => {
+    if (!localStorage.getItem("token")) return;
+    api.verificarSesion().catch(() => {});
+  }, []);
 
   const handleLogin = useCallback(async (email, password) => {
     setLoading(true);

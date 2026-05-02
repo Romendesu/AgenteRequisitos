@@ -4,6 +4,7 @@ import * as api from "../services/api";
 export const PHASE = {
   SETUP: "setup",
   COLLECTING: "collecting",
+  STAKEHOLDERS: "stakeholders",
   WAITING: "waiting",
   GENERATING: "generating",
   DONE: "done",
@@ -85,7 +86,7 @@ export default function useChat() {
       }
 
       setMessages(msgs);
-      setPhase(requisitos.length === 0 ? PHASE.COLLECTING : prio ? PHASE.DONE : PHASE.WAITING);
+      setPhase(PHASE.COLLECTING);
     } catch {
       setMessages([msg("ai", "text", { text: `Error al cargar el proyecto.` })]);
       setPhase(PHASE.WAITING);
@@ -95,6 +96,10 @@ export default function useChat() {
   }
 
   async function submit(texto) {
+    if (phase === PHASE.STAKEHOLDERS) {
+      await _generarConInteresados(texto);
+      return;
+    }
     push(msg("user", "text", { text: texto }));
     setLoading(true);
     setLoadingStep("Agente Extractor — clasificando y redactando el requisito");
@@ -111,7 +116,7 @@ export default function useChat() {
     try {
       const data = await api.crearRequisito(projectId, textoConContexto);
       push(msg("ai", "requirement", { requisito: data.requisito, calidad: data.calidad }));
-      setPhase(PHASE.WAITING);
+      setPhase(PHASE.COLLECTING);
     } catch (e) {
       const isDuplicate = e.message?.toLowerCase().includes("similar") || e.message?.toLowerCase().includes("existe");
       push(msg("ai", "text", {
@@ -133,30 +138,36 @@ export default function useChat() {
     setPhase(PHASE.COLLECTING);
   }
 
-  async function finalizar() {
+  function finalizar() {
+    push(msg("ai", "text", {
+      text: "Antes de generar el documento, cuéntame quiénes son los interesados del proyecto. Puedes listarlos con su nombre, rol y responsabilidad (uno por línea, ej: \"Ana García — Product Manager — Define el backlog y prioridades\").",
+    }));
+    setPhase(PHASE.STAKEHOLDERS);
+  }
+
+  async function _generarConInteresados(stakeholderText) {
+    push(msg("user", "text", { text: stakeholderText }));
     setPhase(PHASE.GENERATING);
     setLoading(true);
 
     try {
-      // Paso 1: Priorizador
       setLoadingStep("Agente Priorizador — calculando scores MoSCoW");
       const priorizacion = await api.priorizar(projectId);
 
-      // Paso 2: Writer — introducción
-      setLoadingStep("Agente Writer — generando introducción del documento con IA");
+      setLoadingStep("Agente Writer — generando documento con IA");
       const writerTimer = setTimeout(
         () => setLoadingStep("Agente Writer — renderizando Markdown, PDF y DOCX"),
         4000
       );
 
-      const doc = await api.generarDocumento(projectId);
+      const doc = await api.generarDocumento(projectId, stakeholderText);
       clearTimeout(writerTimer);
 
       push(msg("ai", "document", { priorizacion, doc, proyecto, projectId }));
-      setPhase(PHASE.DONE);
+      setPhase(PHASE.COLLECTING);
     } catch (e) {
       push(msg("ai", "text", { text: `Error al generar el documento: ${e.message}` }));
-      setPhase(PHASE.DONE);
+      setPhase(PHASE.COLLECTING);
     } finally {
       setLoading(false);
       setLoadingStep("");
@@ -174,8 +185,11 @@ export default function useChat() {
     .filter((m) => m.type === "requirement")
     .map((m) => m.requisito);
 
-  const moscowLabels =
-    messages.find((m) => m.type === "document")?.priorizacion?.moscow_labels ?? {};
+  const docMsg = [...messages].reverse().find((m) => m.type === "document");
+  const moscowLabels = docMsg?.priorizacion?.moscow_labels ?? {};
+  const docInfo = docMsg
+    ? { priorizacion: docMsg.priorizacion, doc: docMsg.doc, projectId: docMsg.projectId, proyecto: docMsg.proyecto }
+    : null;
 
   return {
     messages,
@@ -186,6 +200,7 @@ export default function useChat() {
     projectId,
     requisitos,
     moscowLabels,
+    docInfo,
     submit,
     continuar,
     finalizar,

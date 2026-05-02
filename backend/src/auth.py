@@ -61,14 +61,15 @@ def decode_token(token: str) -> dict:
 def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(_bearer)) -> dict:
     try:
         payload = decode_token(credentials.credentials)
-        user = db.get_user_by_id(payload["sub"])
-        if not user:
-            raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Usuario no encontrado")
-        return user
     except jwt.ExpiredSignatureError:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Token expirado")
     except Exception:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Token inválido")
+
+    user = db.get_user_by_id(payload["sub"])
+    if not user:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Usuario no encontrado")
+    return user
 
 
 _bearer_optional = HTTPBearer(auto_error=False)

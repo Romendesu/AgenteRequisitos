@@ -7,7 +7,7 @@ from tinydb import TinyDB, Query
 _DB_DIR = Path("data")
 _DB_DIR.mkdir(parents=True, exist_ok=True)
 
-_db = TinyDB(_DB_DIR / "db.json", indent=2, ensure_ascii=False)
+_db = TinyDB(_DB_DIR / "db.json", indent=2, ensure_ascii=False, encoding="utf-8")
 
 _users = _db.table("users")
 _projects = _db.table("projects")

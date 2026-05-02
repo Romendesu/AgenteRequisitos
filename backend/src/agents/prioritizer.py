@@ -79,17 +79,21 @@ _KEYWORDS_CORE = [
 
 class AgentePriorizador:
     PESOS = {
-        "impacto_negocio":  0.40,
+        "impacto_negocio":  0.30,
         "riesgo_tecnico":   0.25,
-        "esfuerzo_estimado": 0.20,
-        "dependencias":     0.15,
+        "esfuerzo_estimado": 0.25,
+        "dependencias":     0.20,
     }
 
-    # Umbrales ajustados para producir las 4 categorías con naturalidad
-    UMBRAL_MUST   = 3.5   # Alta prioridad normal → Must Have
-    UMBRAL_SHOULD = 2.5   # Prioridad media → Should Have
-    UMBRAL_COULD  = 1.5   # Baja prioridad → Could Have
-    # < 1.5 → Won't Have
+    # Distribución objetivo por rango relativo (porcentajes aproximados)
+    # Los umbrales absolutos solo aplican como floor/ceiling extremos
+    DIST_MUST   = 0.30   # top 30% → Must Have
+    DIST_SHOULD = 0.35   # siguiente 35% → Should Have
+    DIST_COULD  = 0.25   # siguiente 25% → Could Have
+    # bottom 10% → Won't Have
+
+    # Floors absolutos: score muy bajo → Won't Have sin importar ranking
+    FLOOR_WONT  = 1.8
 
     def __init__(self):
         self.llm = ChatOllama(model="llama3.2", temperature=0.2, format="json")
@@ -101,39 +105,62 @@ class AgentePriorizador:
         tipo      = req.get("tipo", "Funcional").strip()
         desc      = (req.get("descripcion", "") + " " + req.get("criterio_aceptacion", "")).lower()
 
-        # 1. Impacto de negocio — basado en prioridad + keywords
-        base_impacto = {"Alta": 5, "Media": 3, "Baja": 1}.get(prioridad, 3)
-        if any(k in desc for k in _KEYWORDS_CRITICO):
+        es_nf = "No Funcional" in tipo
+        es_dominio = "Dominio" in tipo
+
+        # 1. Impacto de negocio
+        # Partimos de la prioridad declarada pero la escala es más conservadora:
+        # Alta → 4 (no 5) para dejar margen de diferenciación
+        base_impacto = {"Alta": 4, "Media": 3, "Baja": 1}.get(prioridad, 3)
+        # Keywords verdaderamente críticos suben al máximo
+        critical_hits = sum(1 for k in _KEYWORDS_CRITICO if k in desc)
+        if critical_hits >= 2:
             base_impacto = min(5, base_impacto + 1)
+        elif critical_hits == 0 and es_nf:
+            # RNF sin keywords críticos: impacto medio-bajo por defecto
+            base_impacto = max(1, base_impacto - 1)
         if any(k in desc for k in _KEYWORDS_WONT):
             base_impacto = max(1, base_impacto - 2)
 
-        # 2. Riesgo técnico — por complejidad del requisito
-        if any(k in desc for k in _KEYWORDS_COMPLEJO):
+        # 2. Riesgo técnico — complejidad real del requisito
+        complex_hits = sum(1 for k in _KEYWORDS_COMPLEJO if k in desc)
+        if complex_hits >= 2:
+            riesgo = 5
+        elif complex_hits == 1:
             riesgo = 4
         elif any(k in desc for k in _KEYWORDS_SIMPLE):
             riesgo = 2
+        elif es_dominio:
+            riesgo = 2   # Restricciones de dominio: bajo riesgo de impl.
         else:
             riesgo = 3
 
-        # 3. Esfuerzo estimado — RD son constraints (bajo esfuerzo de impl.),
-        #    requisitos complejos tienen más esfuerzo
-        if "Dominio" in tipo:
-            esfuerzo = 2   # Las restricciones de dominio no se implementan, se validan
-        elif any(k in desc for k in _KEYWORDS_COMPLEJO):
+        # 3. Esfuerzo estimado — mayor esfuerzo baja el score
+        if es_dominio:
+            esfuerzo = 2   # Constraints: se validan, no implementan
+        elif complex_hits >= 2:
+            esfuerzo = 5
+        elif complex_hits == 1:
             esfuerzo = 4
         elif any(k in desc for k in _KEYWORDS_SIMPLE):
             esfuerzo = 2
         elif prioridad == "Baja" and any(k in desc for k in _KEYWORDS_WONT):
-            esfuerzo = 5   # Baja + fuera de alcance = mucho esfuerzo/coste de oportunidad
+            esfuerzo = 5
+        elif es_nf:
+            esfuerzo = 3
         else:
             esfuerzo = 3
 
-        # 4. Dependencias — requisitos core bloquean muchos otros
-        if any(k in desc for k in _KEYWORDS_CORE):
+        # 4. Dependencias — cuántos otros requisitos dependen de este
+        core_hits = sum(1 for k in _KEYWORDS_CORE if k in desc)
+        if core_hits >= 2:
+            dependencias = 5
+        elif core_hits == 1:
             dependencias = 4
-        elif "No Funcional" in tipo:
+        elif es_nf:
             dependencias = 2   # RNF raramente bloquean funcionales
+        elif es_dominio:
+            dependencias = 3   # Constraints: los demás deben respetarlas
         else:
             dependencias = 3
 
@@ -153,14 +180,37 @@ class AgentePriorizador:
         )
         return round(min(5.0, max(1.0, score)), 2)
 
-    def _categoria_moscow(self, score: float) -> str:
-        if score >= self.UMBRAL_MUST:
-            return "Must Have"
-        if score >= self.UMBRAL_SHOULD:
-            return "Should Have"
-        if score >= self.UMBRAL_COULD:
-            return "Could Have"
-        return "Won't Have"
+    def _categorizar_todos(self, scored: List[tuple]) -> Dict[str, str]:
+        """
+        Distribución relativa: ordena por score y reparte en categorías usando
+        porcentajes objetivo. Scores < FLOOR_WONT van a Won't Have sin importar ranking.
+        """
+        if not scored:
+            return {}
+
+        wont_abs = [(rid, s) for rid, s in scored if s < self.FLOOR_WONT]
+        activos  = sorted([(rid, s) for rid, s in scored if s >= self.FLOOR_WONT],
+                          key=lambda x: x[1], reverse=True)
+
+        n = len(activos)
+        must_n   = max(1, round(n * self.DIST_MUST))   if n > 0 else 0
+        should_n = max(1, round(n * self.DIST_SHOULD)) if n > 0 else 0
+        could_n  = max(1, round(n * self.DIST_COULD))  if n > 0 else 0
+
+        labels: Dict[str, str] = {}
+        for rid, _ in wont_abs:
+            labels[rid] = "Won't Have"
+        for i, (rid, _) in enumerate(activos):
+            if i < must_n:
+                labels[rid] = "Must Have"
+            elif i < must_n + should_n:
+                labels[rid] = "Should Have"
+            elif i < must_n + should_n + could_n:
+                labels[rid] = "Could Have"
+            else:
+                labels[rid] = "Won't Have"
+
+        return labels
 
     def _justificacion(self, req_id: str, d: DimensionScores, score: float, cat: str) -> str:
         partes = []
@@ -219,24 +269,38 @@ Formato: [{{"requisito_1":"RF-01","requisito_2":"RF-02","tipo_conflicto":"Tecnic
     # ─── Punto de entrada ─────────────────────────────────────────────────────
 
     def priorizar(self, requisitos: List[Dict[str, Any]]) -> PriorizacionResultado:
-        resultados, moscow_labels, priority_scores = [], {}, {}
+        priority_scores: Dict[str, float] = {}
+        dims_map: Dict[str, DimensionScores] = {}
 
         for req in requisitos:
+            req_id = req.get("id", "")
             dims   = self._evaluar_dimensiones(req)
             score  = self._calcular_score(dims)
-            cat    = self._categoria_moscow(score)
-            just   = self._justificacion(req.get("id", ""), dims, score, cat)
+            priority_scores[req_id] = score
+            dims_map[req_id] = dims
+
+        # Categorización relativa — evita que todo caiga en Must Have
+        rel_labels = self._categorizar_todos(list(priority_scores.items()))
+
+        resultados: List[MoscowScore] = []
+        moscow_labels: Dict[str, str] = {}
+
+        for req in requisitos:
+            req_id = req.get("id", "")
+            dims   = dims_map[req_id]
+            score  = priority_scores[req_id]
+            cat    = rel_labels.get(req_id, "Could Have")
+            just   = self._justificacion(req_id, dims, score, cat)
 
             moscow_score = MoscowScore(
-                requisito_id=req.get("id", ""),
+                requisito_id=req_id,
                 dimensiones=dims,
                 score_final=score,
                 categoria_moscow=cat,
                 justificacion=just,
             )
             resultados.append(moscow_score)
-            moscow_labels[req.get("id", "")] = cat
-            priority_scores[req.get("id", "")] = score
+            moscow_labels[req_id] = cat
 
         resultados.sort(key=lambda x: x.score_final, reverse=True)
         conflictos = self._detectar_conflictos(requisitos)
@@ -244,12 +308,13 @@ Formato: [{{"requisito_1":"RF-01","requisito_2":"RF-02","tipo_conflicto":"Tecnic
         return PriorizacionResultado(
             metadata={
                 "fecha": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                "metodo": "MoSCoW con Scoring Determinista Multidimensional",
+                "metodo": "MoSCoW con Scoring Multidimensional y Distribución Relativa",
                 "pesos": self.PESOS,
-                "umbrales": {
-                    "must_have":   self.UMBRAL_MUST,
-                    "should_have": self.UMBRAL_SHOULD,
-                    "could_have":  self.UMBRAL_COULD,
+                "distribucion_objetivo": {
+                    "must_have":   f"{int(self.DIST_MUST*100)}%",
+                    "should_have": f"{int(self.DIST_SHOULD*100)}%",
+                    "could_have":  f"{int(self.DIST_COULD*100)}%",
+                    "wont_have":   f"{int((1-self.DIST_MUST-self.DIST_SHOULD-self.DIST_COULD)*100)}%",
                 },
             },
             requisitos_priorizados=[r.model_dump() for r in resultados],

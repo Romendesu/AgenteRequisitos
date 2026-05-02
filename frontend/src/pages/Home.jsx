@@ -118,7 +118,7 @@ function TypingIndicator({ step }) {
 export default function Home() {
   const isMobile = useIsMobile();
   const { showAside: isOpen, showText, toggleAside } = useAside(true);
-  const { messages, phase, loading, loadingStep, requisitos, moscowLabels, submit, continuar, finalizar, iniciarProyecto, cargarProyecto, reset } = useChat();
+  const { messages, phase, loading, loadingStep, requisitos, moscowLabels, docInfo, submit, continuar, finalizar, iniciarProyecto, cargarProyecto, reset } = useChat();
   const { user, logout, updateProfile } = useAuth();
   const navigate = useNavigate();
   const bottomRef = useRef(null);
@@ -130,9 +130,12 @@ export default function Home() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading]);
 
-  const showInput = phase === PHASE.COLLECTING && !loading;
-  const showConfirm = phase === PHASE.WAITING && !loading;
-  const isSetup = phase === PHASE.SETUP;
+  const showInput   = (phase === PHASE.COLLECTING || phase === PHASE.STAKEHOLDERS) && !loading;
+  const isSetup     = phase === PHASE.SETUP;
+  const canFinalize = phase === PHASE.COLLECTING && requisitos.length > 0 && !loading;
+  const inputPlaceholder = phase === PHASE.STAKEHOLDERS
+    ? "Ej: Ana García — Product Manager — Define el backlog y prioridades"
+    : undefined;
 
   function handleLogout() {
     logout();
@@ -197,6 +200,9 @@ export default function Home() {
           moscowLabels={moscowLabels}
           isOpen={panelOpen}
           onToggle={() => setPanelOpen((v) => !v)}
+          canFinalize={canFinalize}
+          onFinalizar={finalizar}
+          docInfo={docInfo}
         />
       )}
 
@@ -220,26 +226,10 @@ export default function Home() {
           )}
         </div>
 
-        {!isSetup && (
+        {!isSetup && showInput && (
           <div className="px-4 pb-6 flex-shrink-0">
-            <div className="max-w-2xl mx-auto space-y-3">
-              {showConfirm && (
-                <div className="flex justify-center gap-3">
-                  <button
-                    onClick={continuar}
-                    className="px-6 py-2.5 bg-gray-800 hover:bg-gray-700 text-white rounded-full text-sm font-medium transition-colors border border-gray-700"
-                  >
-                    Sí, añadir más
-                  </button>
-                  <button
-                    onClick={finalizar}
-                    className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-full text-sm font-medium transition-colors"
-                  >
-                    No, generar documento
-                  </button>
-                </div>
-              )}
-              {showInput && <PromptLabel onSubmit={handleSubmit} />}
+            <div className="max-w-2xl mx-auto">
+              <PromptLabel onSubmit={handleSubmit} placeholder={inputPlaceholder} />
             </div>
           </div>
         )}

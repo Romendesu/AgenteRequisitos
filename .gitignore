@@ -38,6 +38,7 @@ data/db/
 *.db
 *.sqlite
 .chroma/
+db.json
 
 # --- SALIDAS ---
 data/output/*.pdf

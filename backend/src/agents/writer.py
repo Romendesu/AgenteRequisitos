@@ -13,11 +13,24 @@ from langchain_core.prompts import ChatPromptTemplate
 # Plantilla Jinja2 del documento de requisitos
 # ============================================================================
 
-PLANTILLA_MD = """# Documento de Especificación de Requisitos de Software
+PLANTILLA_MD = """# {{ nombre_proyecto }} — Especificación de Requisitos de Software
 
-**Versión:** 1.0
-**Fecha:** {{ metadata.fecha }}
-**Generado por:** MoSCoW AI
+**Versión:** 1.0 · **Fecha:** {{ metadata.fecha }} · **Generado con MoSCoW AI** · **Requisitos:** {{ todos_requisitos | length }}
+
+---
+
+## Tabla de Contenidos
+
+| # | Sección |
+|---|---------|
+| 1 | [Introducción](#1-introducción) |
+| 2 | [Descripción General del Sistema](#2-descripción-general-del-sistema) |
+| 3 | [Interesados del Proyecto](#3-interesados-del-proyecto) |
+| 4 | [Requisitos Funcionales (RF)](#4-requisitos-funcionales-rf) |
+| 5 | [Requisitos No Funcionales (RNF)](#5-requisitos-no-funcionales-rnf) |
+| 6 | [Restricciones de Dominio (RD)](#6-restricciones-de-dominio-rd) |
+| 7 | [Clasificación MoSCoW](#7-clasificación-moscow) |
+| 8 | [Anexo — Razonamiento de Clasificación](#8-anexo--razonamiento-de-clasificación) |
 
 ---
 
@@ -37,29 +50,41 @@ PLANTILLA_MD = """# Documento de Especificación de Requisitos de Software
 |----------|-----------|
 | RF | Requisito Funcional |
 | RNF | Requisito No Funcional |
-| RD | Requisito de Dominio |
+| RD | Restricción de Dominio |
 | MoSCoW | Must Have / Should Have / Could Have / Won't Have |
 | ISO 29148 | Estándar internacional para ingeniería de requisitos |
 
 ---
 
-## 2. Descripción General
+## 2. Descripción General del Sistema
 
 {{ descripcion_general }}
 
 ---
 
-## 3. Requisitos Funcionales (RF)
+## 3. Interesados del Proyecto
+{% if stakeholders %}
+| Nombre | Rol | Responsabilidades |
+|--------|-----|-------------------|
+{% for s in stakeholders %}| **{{ s.nombre }}** | {{ s.rol }} | {{ s.responsabilidades }} |
+{% endfor %}
+{% else %}
+*No se registraron interesados.*
+{% endif %}
+
+---
+
+## 4. Requisitos Funcionales (RF)
 {% if requisitos_funcionales %}
 {% for req in requisitos_funcionales %}
-### {{ req.id }} — {{ req.descripcion[:60] }}{% if req.descripcion|length > 60 %}...{% endif %}
+### {{ req.id }}
 
 | Campo | Detalle |
 |-------|---------|
-| **ID** | {{ req.id }} |
 | **Descripción** | {{ req.descripcion }} |
 | **Prioridad** | {{ req.prioridad }} |
 | **Criterio de Aceptación** | {{ req.criterio_aceptacion }} |
+| **Clasificación MoSCoW** | {{ moscow_labels.get(req.id, '—') }} |
 
 {% endfor %}
 {% else %}
@@ -68,17 +93,17 @@ PLANTILLA_MD = """# Documento de Especificación de Requisitos de Software
 
 ---
 
-## 4. Requisitos No Funcionales (RNF)
+## 5. Requisitos No Funcionales (RNF)
 {% if requisitos_no_funcionales %}
 {% for req in requisitos_no_funcionales %}
-### {{ req.id }} — {{ req.descripcion[:60] }}{% if req.descripcion|length > 60 %}...{% endif %}
+### {{ req.id }}
 
 | Campo | Detalle |
 |-------|---------|
-| **ID** | {{ req.id }} |
 | **Descripción** | {{ req.descripcion }} |
 | **Prioridad** | {{ req.prioridad }} |
 | **Criterio de Aceptación** | {{ req.criterio_aceptacion }} |
+| **Clasificación MoSCoW** | {{ moscow_labels.get(req.id, '—') }} |
 
 {% endfor %}
 {% else %}
@@ -87,17 +112,17 @@ PLANTILLA_MD = """# Documento de Especificación de Requisitos de Software
 
 ---
 
-## 5. Restricciones de Dominio (RD)
+## 6. Restricciones de Dominio (RD)
 {% if requisitos_dominio %}
 {% for req in requisitos_dominio %}
-### {{ req.id }} — {{ req.descripcion[:60] }}{% if req.descripcion|length > 60 %}...{% endif %}
+### {{ req.id }}
 
 | Campo | Detalle |
 |-------|---------|
-| **ID** | {{ req.id }} |
 | **Descripción** | {{ req.descripcion }} |
 | **Prioridad** | {{ req.prioridad }} |
 | **Criterio de Aceptación** | {{ req.criterio_aceptacion }} |
+| **Clasificación MoSCoW** | {{ moscow_labels.get(req.id, '—') }} |
 
 {% endfor %}
 {% else %}
@@ -106,11 +131,11 @@ PLANTILLA_MD = """# Documento de Especificación de Requisitos de Software
 
 ---
 
-## 6. Tabla de Priorización MoSCoW
+## 7. Clasificación MoSCoW
 {% if moscow_table %}
-| ID | Descripción | Categoría MoSCoW | Score | Justificación |
-|----|-------------|-----------------|-------|---------------|
-{% for row in moscow_table %}| {{ row.id }} | {{ row.descripcion[:50] }}{% if row.descripcion|length > 50 %}...{% endif %} | {{ row.categoria }} | {{ row.score }} | {{ row.justificacion[:80] }}{% if row.justificacion|length > 80 %}...{% endif %} |
+| ID | Descripción | Categoría | Score | Justificación |
+|----|-------------|-----------|-------|---------------|
+{% for row in moscow_table %}| {{ row.id }} | {{ row.descripcion[:55] }}{% if row.descripcion|length > 55 %}...{% endif %} | **{{ row.categoria }}** | {{ row.score }} | {{ row.justificacion[:90] }}{% if row.justificacion|length > 90 %}...{% endif %} |
 {% endfor %}
 {% else %}
 | ID | Descripción | Prioridad |
@@ -121,43 +146,44 @@ PLANTILLA_MD = """# Documento de Especificación de Requisitos de Software
 
 ---
 
-## ANEXO B — Razonamiento de Clasificación
-
-*Generado automáticamente por el Agente Extractor*
+## Anexo — Razonamiento de Clasificación
 
 {% for req in todos_requisitos %}
-### B.{{ loop.index }} — {{ req.id }}
+### {{ req.id }} — {{ req.tipo }}
 
 **Descripción:** {{ req.descripcion }}
 
-**Tipo:** {{ req.tipo }}
-**Prioridad:** {{ req.prioridad }}
+**Prioridad declarada:** {{ req.prioridad }}
 **Criterio de Aceptación:** {{ req.criterio_aceptacion }}
 
 ---
 {% endfor %}
 
-*Documento generado el {{ metadata.fecha }} · Sistema Multi-Agente de Ingeniería de Requisitos v1.0*
+*Generado con MoSCoW AI · {{ metadata.fecha }}*
 """
 
 CSS_PDF = """
-@page { margin: 2cm 2.5cm; }
+@page { margin: 2.2cm 2.8cm; }
 body {
-    font-family: Arial, sans-serif;
-    font-size: 11pt;
-    line-height: 1.6;
-    color: #1a1a2e;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    font-size: 10.5pt;
+    line-height: 1.65;
+    color: #1e1e2e;
+    background: #ffffff;
 }
-h1 { font-size: 18pt; color: #0f3460; border-bottom: 2px solid #0f3460; padding-bottom: 6px; }
-h2 { font-size: 14pt; color: #16213e; border-bottom: 1px solid #ccc; padding-bottom: 3px; margin-top: 20px; }
-h3 { font-size: 11pt; color: #533483; margin-top: 14px; }
-table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 9pt; }
-th { background-color: #0f3460; color: white; padding: 6px 8px; text-align: left; }
-td { padding: 5px 8px; border: 1px solid #ddd; }
-tr:nth-child(even) td { background-color: #f4f6fb; }
-code, pre { background: #f0f0f0; padding: 2px 4px; font-family: monospace; font-size: 9pt; }
-hr { border-top: 1px solid #ddd; margin: 16px 0; }
-em { color: #666; font-style: italic; }
+h1 { font-size: 20pt; color: #4f46e5; font-weight: 800; border-bottom: 2px solid #4f46e5; padding-bottom: 6px; margin-bottom: 4px; }
+h2 { font-size: 13pt; color: #3730a3; font-weight: 700; border-bottom: 1px solid #e0e7ff; padding-bottom: 3px; margin-top: 24px; }
+h3 { font-size: 10.5pt; color: #4338ca; font-weight: 600; margin-top: 16px; margin-bottom: 4px; }
+p { margin: 6px 0; }
+table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 9pt; }
+th { background-color: #4f46e5; color: #ffffff; padding: 7px 10px; text-align: left; font-weight: 600; }
+td { padding: 6px 10px; border: 1px solid #e0e7ff; vertical-align: top; }
+tr:nth-child(even) td { background-color: #f5f3ff; }
+code { background: #ede9fe; color: #4f46e5; padding: 1px 5px; border-radius: 3px; font-family: 'Consolas', monospace; font-size: 9pt; }
+hr { border: none; border-top: 1px solid #e0e7ff; margin: 20px 0; }
+em { color: #7c3aed; font-style: italic; }
+strong { color: #1e1e2e; font-weight: 700; }
+li { margin: 3px 0; }
 """
 
 
@@ -175,35 +201,43 @@ class AgenteWriter:
         self.llm = ChatOllama(model="llama3.2", temperature=0.3)
         self.jinja_env = Environment(loader=BaseLoader())
 
-    def _generar_introduccion(self, requisitos: List[Dict]) -> Dict[str, str]:
+    def _generar_introduccion(self, requisitos: List[Dict], nombre_proyecto: str = "", stakeholders_raw: str = "") -> Dict[str, str]:
         """Usa el LLM para generar la introducción narrativa del documento."""
         tipos = set(r.get("tipo", "") for r in requisitos)
         ids = [r.get("id", "") for r in requisitos]
+        descripciones = [r.get("descripcion", "")[:80] for r in requisitos[:5]]
 
         prompt = ChatPromptTemplate.from_template(
-            """Eres un Arquitecto de Software redactando un documento formal de requisitos.
+            """Eres un Arquitecto de Software senior redactando un documento formal de especificación de requisitos.
 
-            Tienes los siguientes requisitos a documentar:
+            Proyecto: {nombre_proyecto}
+            Requisitos ({total} en total):
             - IDs: {ids}
-            - Tipos presentes: {tipos}
-            - Total de requisitos: {total}
+            - Tipos: {tipos}
+            - Ejemplos de descripciones: {descripciones}
+            {stakeholders_context}
 
             Genera exactamente un JSON con estas tres claves:
             {{
-                "proposito": "Párrafo de 2-3 oraciones describiendo el propósito del documento",
-                "alcance": "Párrafo de 2-3 oraciones describiendo el alcance del sistema",
-                "descripcion_general": "Párrafo de 3-4 oraciones describiendo el sistema en términos generales"
+                "proposito": "Párrafo de 2-3 oraciones formales describiendo el propósito del documento y su audiencia objetivo",
+                "alcance": "Párrafo de 2-3 oraciones describiendo qué cubre y qué excluye el sistema",
+                "descripcion_general": "Párrafo de 3-4 oraciones describiendo el sistema, su contexto de negocio y valor aportado"
             }}
 
             Responde ÚNICAMENTE con el JSON, sin texto adicional.
             """
         )
 
+        stakeholders_context = f"\nInteresados identificados: {stakeholders_raw}" if stakeholders_raw else ""
+
         chain = prompt | self.llm
         respuesta = chain.invoke({
+            "nombre_proyecto": nombre_proyecto or "Sistema de Software",
             "ids": ", ".join(ids),
             "tipos": ", ".join(tipos),
-            "total": len(requisitos)
+            "total": len(requisitos),
+            "descripciones": "; ".join(descripciones),
+            "stakeholders_context": stakeholders_context,
         })
 
         try:
@@ -220,10 +254,30 @@ class AgenteWriter:
             return json.loads(contenido)
         except Exception:
             return {
-                "proposito": "Este documento especifica los requisitos del sistema de software desarrollado.",
+                "proposito": f"Este documento especifica los requisitos del sistema {nombre_proyecto}.",
                 "alcance": "El sistema abarca las funcionalidades descritas en los requisitos listados a continuación.",
                 "descripcion_general": "El sistema ha sido diseñado para satisfacer las necesidades identificadas durante el proceso de ingeniería de requisitos."
             }
+
+    def _parsear_stakeholders(self, stakeholders_raw: str) -> List[Dict]:
+        """Convierte texto libre de interesados en lista estructurada."""
+        if not stakeholders_raw or not stakeholders_raw.strip():
+            return []
+        result = []
+        for line in stakeholders_raw.strip().splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            parts = [p.strip() for p in line.split("—") if p.strip()]
+            if not parts:
+                parts = [p.strip() for p in line.split("-", 2) if p.strip()]
+            if len(parts) >= 3:
+                result.append({"nombre": parts[0], "rol": parts[1], "responsabilidades": parts[2]})
+            elif len(parts) == 2:
+                result.append({"nombre": parts[0], "rol": parts[1], "responsabilidades": "—"})
+            else:
+                result.append({"nombre": parts[0], "rol": "—", "responsabilidades": "—"})
+        return result
 
     def _clasificar_requisitos(self, requisitos: List[Dict]) -> Dict[str, List]:
         """Clasifica los requisitos por tipo."""
@@ -262,25 +316,36 @@ class AgenteWriter:
 
         return sorted(tabla, key=lambda x: x["score"], reverse=True)
 
-    def _renderizar_markdown(self, requisitos: List[Dict], priorizacion: Optional[Dict] = None) -> str:
+    def _renderizar_markdown(self, requisitos: List[Dict], priorizacion: Optional[Dict] = None,
+                              nombre_proyecto: str = "", stakeholders_raw: str = "") -> str:
         """Renderiza el documento completo en Markdown usando Jinja2."""
         clasificados = self._clasificar_requisitos(requisitos)
-        textos = self._generar_introduccion(requisitos)
+        textos = self._generar_introduccion(requisitos, nombre_proyecto, stakeholders_raw)
         moscow_table = self._construir_moscow_table(requisitos, priorizacion)
+        stakeholders = self._parsear_stakeholders(stakeholders_raw)
+
+        # Build moscow_labels dict for inline display in requirement tables
+        moscow_labels: Dict[str, str] = {}
+        if priorizacion:
+            for r in priorizacion.get("requisitos_priorizados", []):
+                moscow_labels[r["requisito_id"]] = r.get("categoria_moscow", "—")
 
         template = self.jinja_env.from_string(PLANTILLA_MD)
         return template.render(
             metadata={"fecha": datetime.now().strftime("%Y-%m-%d %H:%M:%S")},
+            nombre_proyecto=nombre_proyecto or "Sistema de Software",
             introduccion={
                 "proposito": textos.get("proposito", ""),
                 "alcance": textos.get("alcance", "")
             },
             descripcion_general=textos.get("descripcion_general", ""),
+            stakeholders=stakeholders,
             requisitos_funcionales=clasificados["funcionales"],
             requisitos_no_funcionales=clasificados["no_funcionales"],
             requisitos_dominio=clasificados["dominio"],
             todos_requisitos=requisitos,
-            moscow_table=moscow_table
+            moscow_table=moscow_table,
+            moscow_labels=moscow_labels,
         )
 
     def _exportar_pdf(self, contenido_md: str, ruta_pdf: str) -> bool:
@@ -305,9 +370,9 @@ class AgenteWriter:
         try:
             from xhtml2pdf import pisa
             with open(ruta_pdf, "wb") as f:
-                resultado = pisa.CreatePDF(html_completo, dest=f, encoding="utf-8")
-            if resultado.err:
-                raise RuntimeError(f"xhtml2pdf error code {resultado.err}")
+                resultado = pisa.CreatePDF(html_completo, dest=f, encoding="utf-8")  # type: ignore[assignment]
+            if getattr(resultado, "err", None):
+                raise RuntimeError(f"xhtml2pdf error code {resultado.err}")  # type: ignore[union-attr]
             return True
         except ImportError:
             pass
@@ -326,7 +391,8 @@ class AgenteWriter:
             print(f"[Writer] WeasyPrint falló: {e}")
         return False
 
-    def _exportar_docx(self, requisitos: List[Dict], priorizacion: Optional[Dict], ruta_docx: str) -> bool:
+    def _exportar_docx(self, requisitos: List[Dict], priorizacion: Optional[Dict], ruta_docx: str,
+                       nombre_proyecto: str = "", stakeholders_raw: str = "") -> bool:
         """Genera el documento DOCX con python-docx."""
         try:
             from docx import Document
@@ -334,14 +400,14 @@ class AgenteWriter:
 
             doc = Document()
 
-            titulo = doc.add_heading("Documento de Especificación de Requisitos", 0)
+            titulo = doc.add_heading(f"{nombre_proyecto or 'Sistema de Software'} — Especificación de Requisitos", 0)
             titulo.alignment = WD_ALIGN_PARAGRAPH.CENTER
             doc.add_paragraph(f"Fecha: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-            doc.add_paragraph("Generado por: Sistema Multi-Agente de Ingeniería de Requisitos")
+            doc.add_paragraph("Generado con MoSCoW AI")
             doc.add_page_break()
 
             # Sección 1 — Introducción
-            textos = self._generar_introduccion(requisitos)
+            textos = self._generar_introduccion(requisitos, nombre_proyecto, stakeholders_raw)
             doc.add_heading("1. Introducción", 1)
             doc.add_heading("1.1 Propósito del Documento", 2)
             doc.add_paragraph(textos.get("proposito", ""))
@@ -367,12 +433,30 @@ class AgenteWriter:
             doc.add_heading("2. Descripción General", 1)
             doc.add_paragraph(textos.get("descripcion_general", ""))
 
-            # Secciones 3-5 por tipo
+            # Sección 3 — Interesados
+            doc.add_heading("3. Interesados del Proyecto", 1)
+            stakeholders = self._parsear_stakeholders(stakeholders_raw)
+            if stakeholders:
+                tbl_s = doc.add_table(rows=1, cols=3)
+                tbl_s.style = "Table Grid"
+                enc = tbl_s.rows[0].cells
+                enc[0].text = "Nombre"
+                enc[1].text = "Rol"
+                enc[2].text = "Responsabilidades"
+                for s in stakeholders:
+                    f = tbl_s.add_row().cells
+                    f[0].text = s["nombre"]
+                    f[1].text = s["rol"]
+                    f[2].text = s["responsabilidades"]
+            else:
+                doc.add_paragraph("No se registraron interesados.")
+
+            # Secciones 4-6 por tipo
             clasificados = self._clasificar_requisitos(requisitos)
             secciones = [
-                ("3. Requisitos Funcionales (RF)", clasificados["funcionales"]),
-                ("4. Requisitos No Funcionales (RNF)", clasificados["no_funcionales"]),
-                ("5. Restricciones de Dominio (RD)", clasificados["dominio"]),
+                ("4. Requisitos Funcionales (RF)", clasificados["funcionales"]),
+                ("5. Requisitos No Funcionales (RNF)", clasificados["no_funcionales"]),
+                ("6. Restricciones de Dominio (RD)", clasificados["dominio"]),
             ]
             for titulo_sec, lista in secciones:
                 doc.add_heading(titulo_sec, 1)
@@ -393,8 +477,8 @@ class AgenteWriter:
                     fila[2].text = req.get("prioridad", "")
                     fila[3].text = req.get("criterio_aceptacion", "")
 
-            # Sección 6 — MoSCoW
-            doc.add_heading("6. Tabla de Priorización MoSCoW", 1)
+            # Sección 7 — MoSCoW
+            doc.add_heading("7. Clasificación MoSCoW", 1)
             moscow_table = self._construir_moscow_table(requisitos, priorizacion)
             if moscow_table:
                 tbl_m = doc.add_table(rows=1, cols=5)
@@ -444,7 +528,9 @@ class AgenteWriter:
             print(f"[Writer] Error generando DOCX: {e}")
             return False
 
-    def generar_documento(self, archivo_requisitos: str, archivo_priorizacion: Optional[str] = None, output_dir: Optional[str] = None) -> Dict[str, Any]:
+    def generar_documento(self, archivo_requisitos: str, archivo_priorizacion: Optional[str] = None,
+                          output_dir: Optional[str] = None, nombre_proyecto: str = "",
+                          stakeholders_raw: str = "") -> Dict[str, Any]:
         """
         Genera el documento formal en MD, PDF y DOCX.
 
@@ -484,7 +570,7 @@ class AgenteWriter:
 
         # Paso 1: Markdown con Jinja2
         print("[Writer] Renderizando Markdown con Jinja2...")
-        contenido_md = self._renderizar_markdown(requisitos, priorizacion)
+        contenido_md = self._renderizar_markdown(requisitos, priorizacion, nombre_proyecto, stakeholders_raw)
         ruta_md = directorio / "documento_requisitos.md"
         ruta_md.write_text(contenido_md, encoding="utf-8")
         print(f"[Writer] MD generado: {ruta_md}")
@@ -497,7 +583,7 @@ class AgenteWriter:
         # Paso 3: DOCX con python-docx
         ruta_docx_str = str(directorio / "documento_requisitos.docx")
         print("[Writer] Generando DOCX con python-docx...")
-        ruta_docx = ruta_docx_str if self._exportar_docx(requisitos, priorizacion, ruta_docx_str) else None
+        ruta_docx = ruta_docx_str if self._exportar_docx(requisitos, priorizacion, ruta_docx_str, nombre_proyecto, stakeholders_raw) else None
 
         resultado = {
             "md": str(ruta_md),

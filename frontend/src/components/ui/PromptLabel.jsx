@@ -1,7 +1,7 @@
 import { useState } from "react";
 import send from "../../assets/images/send.svg";
 
-export default function PromptLabel({ onSubmit }) {
+export default function PromptLabel({ onSubmit, placeholder }) {
   const [text, setText] = useState("");
 
   const handleSubmit = () => {
@@ -25,7 +25,7 @@ export default function PromptLabel({ onSubmit }) {
         value={text}
         onChange={(e) => setText(e.target.value)}
         onKeyDown={handleKeyDown}
-        placeholder="Describe un requisito de tu sistema..."
+        placeholder={placeholder ?? "Describe un requisito de tu sistema..."}
         className="flex-1 bg-transparent text-white placeholder:text-gray-500 text-sm outline-none resize-none px-2 leading-6 max-h-40"
       />
       <button

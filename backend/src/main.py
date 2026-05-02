@@ -35,6 +35,9 @@ class UpdateProfileRequest(BaseModel):
     password: Optional[str] = None
     avatar: Optional[str] = None  # base64 data URL
 
+class DocumentRequest(BaseModel):
+    stakeholders: Optional[str] = ""
+
 
 # ─── Gestor de proyecto ───────────────────────────────────────────────────────
 
@@ -103,12 +106,13 @@ class GestorProyecto:
         )
         return resultado_dict
 
-    def generar_documento(self) -> Dict:
+    def generar_documento(self, stakeholders: str = "") -> Dict:
         requisitos = db.get_requirements(self.project_id)
         if not requisitos:
             raise ValueError("No hay requisitos para generar el documento")
 
         priorizacion = db.get_priorizacion(self.project_id)
+        proyecto = db.get_project(self.project_id)
 
         temp = self.output_dir / "temp_requisitos.json"
         temp.write_text(
@@ -120,6 +124,8 @@ class GestorProyecto:
         resultado = self.writer.generar_documento(
             str(temp), priorizacion_path,
             output_dir=str(self.output_dir / "documento_requisitos"),
+            nombre_proyecto=proyecto.get("nombre", "") if proyecto else "",
+            stakeholders_raw=stakeholders,
         )
         temp.unlink(missing_ok=True)
 
@@ -235,6 +241,11 @@ def update_profile(req: UpdateProfileRequest, user=Depends(auth.get_current_user
     }
 
 
+@app.get("/auth/me", tags=["Auth"])
+def me(user: dict = Depends(auth.get_current_user)):
+    return {"id": user["id"], "email": user["email"], "username": user["username"], "avatar": user.get("avatar")}
+
+
 @app.post("/auth/login", tags=["Auth"])
 def login(req: LoginRequest):
     user = db.get_user_by_email(req.email)
@@ -343,11 +354,11 @@ def obtener_priorizacion(project_id: str, user=Depends(auth.get_current_user)):
 # ─── Documentación ────────────────────────────────────────────────────────────
 
 @app.post("/projects/{project_id}/documento", tags=["Documentación"])
-def generar_documento(project_id: str, user=Depends(auth.get_current_user)):
+def generar_documento(project_id: str, req: DocumentRequest = DocumentRequest(), user=Depends(auth.get_current_user)):
     _verificar_proyecto(project_id, user["id"])
     try:
         gestor = GestorProyecto(project_id)
-        return gestor.generar_documento()
+        return gestor.generar_documento(stakeholders=req.stakeholders or "")
     except ValueError as e:
         raise HTTPException(400, str(e))
     except Exception as e:
