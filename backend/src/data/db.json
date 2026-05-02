@@ -151,109 +151,26 @@
         }
       }
     },
-    "6": {
+    "5": {
       "project_id": "11f1625a-0675-434c-94bc-b2958bbd472d",
       "resultado": {
         "metadata": {
-          "fecha": "2026-05-02 13:09:58",
-          "metodo": "MoSCoW con Scoring Determinista Multidimensional",
+          "fecha": "2026-05-02 22:30:45",
+          "metodo": "MoSCoW con Scoring Multidimensional y Distribución Relativa",
           "pesos": {
-            "impacto_negocio": 0.4,
+            "impacto_negocio": 0.3,
             "riesgo_tecnico": 0.25,
-            "esfuerzo_estimado": 0.2,
-            "dependencias": 0.15
+            "esfuerzo_estimado": 0.25,
+            "dependencias": 0.2
           },
-          "umbrales": {
-            "must_have": 3.5,
-            "should_have": 2.5,
-            "could_have": 1.5
+          "distribucion_objetivo": {
+            "must_have": "30%",
+            "should_have": "35%",
+            "could_have": "25%",
+            "wont_have": "9%"
           }
         },
         "requisitos_priorizados": [
-          {
-            "requisito_id": "RD-01",
-            "dimensiones": {
-              "impacto_negocio": 5,
-              "riesgo_tecnico": 3,
-              "esfuerzo_estimado": 2,
-              "dependencias": 3
-            },
-            "score_final": 4.0,
-            "categoria_moscow": "Must Have",
-            "justificacion": "Must Have — score 4.0/5: alto impacto de negocio (5/5), bajo coste de implementación (2/5). Requisito crítico para el MVP."
-          },
-          {
-            "requisito_id": "RD-02",
-            "dimensiones": {
-              "impacto_negocio": 5,
-              "riesgo_tecnico": 3,
-              "esfuerzo_estimado": 2,
-              "dependencias": 3
-            },
-            "score_final": 4.0,
-            "categoria_moscow": "Must Have",
-            "justificacion": "Must Have — score 4.0/5: alto impacto de negocio (5/5), bajo coste de implementación (2/5). Requisito crítico para el MVP."
-          },
-          {
-            "requisito_id": "RF-01",
-            "dimensiones": {
-              "impacto_negocio": 5,
-              "riesgo_tecnico": 3,
-              "esfuerzo_estimado": 3,
-              "dependencias": 3
-            },
-            "score_final": 3.8,
-            "categoria_moscow": "Must Have",
-            "justificacion": "Must Have — score 3.8/5: alto impacto de negocio (5/5). Requisito crítico para el MVP."
-          },
-          {
-            "requisito_id": "RF-02",
-            "dimensiones": {
-              "impacto_negocio": 5,
-              "riesgo_tecnico": 3,
-              "esfuerzo_estimado": 3,
-              "dependencias": 3
-            },
-            "score_final": 3.8,
-            "categoria_moscow": "Must Have",
-            "justificacion": "Must Have — score 3.8/5: alto impacto de negocio (5/5). Requisito crítico para el MVP."
-          },
-          {
-            "requisito_id": "RF-03",
-            "dimensiones": {
-              "impacto_negocio": 5,
-              "riesgo_tecnico": 3,
-              "esfuerzo_estimado": 3,
-              "dependencias": 3
-            },
-            "score_final": 3.8,
-            "categoria_moscow": "Must Have",
-            "justificacion": "Must Have — score 3.8/5: alto impacto de negocio (5/5). Requisito crítico para el MVP."
-          },
-          {
-            "requisito_id": "RF-04",
-            "dimensiones": {
-              "impacto_negocio": 5,
-              "riesgo_tecnico": 3,
-              "esfuerzo_estimado": 3,
-              "dependencias": 3
-            },
-            "score_final": 3.8,
-            "categoria_moscow": "Must Have",
-            "justificacion": "Must Have — score 3.8/5: alto impacto de negocio (5/5). Requisito crítico para el MVP."
-          },
-          {
-            "requisito_id": "RNF-03",
-            "dimensiones": {
-              "impacto_negocio": 5,
-              "riesgo_tecnico": 4,
-              "esfuerzo_estimado": 4,
-              "dependencias": 2
-            },
-            "score_final": 3.7,
-            "categoria_moscow": "Must Have",
-            "justificacion": "Must Have — score 3.7/5: alto impacto de negocio (5/5), esfuerzo de implementación elevado (4/5), riesgo técnico elevado (4/5). Requisito crítico para el MVP."
-          },
           {
             "requisito_id": "RNF-01",
             "dimensiones": {
@@ -262,73 +179,157 @@
               "esfuerzo_estimado": 3,
               "dependencias": 2
             },
-            "score_final": 3.65,
+            "score_final": 3.4,
             "categoria_moscow": "Must Have",
-            "justificacion": "Must Have — score 3.65/5: alto impacto de negocio (5/5). Requisito crítico para el MVP."
+            "justificacion": "Must Have — score 3.4/5: alto impacto de negocio (5/5). Requisito crítico para el MVP."
           },
           {
-            "requisito_id": "RNF-02",
+            "requisito_id": "RF-01",
             "dimensiones": {
-              "impacto_negocio": 5,
+              "impacto_negocio": 4,
               "riesgo_tecnico": 3,
               "esfuerzo_estimado": 3,
-              "dependencias": 2
+              "dependencias": 3
             },
-            "score_final": 3.65,
+            "score_final": 3.3,
             "categoria_moscow": "Must Have",
-            "justificacion": "Must Have — score 3.65/5: alto impacto de negocio (5/5). Requisito crítico para el MVP."
+            "justificacion": "Must Have — score 3.3/5: alto impacto de negocio (4/5). Requisito crítico para el MVP."
           },
           {
-            "requisito_id": "RNF-04",
+            "requisito_id": "RF-02",
             "dimensiones": {
-              "impacto_negocio": 5,
+              "impacto_negocio": 4,
               "riesgo_tecnico": 3,
               "esfuerzo_estimado": 3,
+              "dependencias": 3
+            },
+            "score_final": 3.3,
+            "categoria_moscow": "Must Have",
+            "justificacion": "Must Have — score 3.3/5: alto impacto de negocio (4/5). Requisito crítico para el MVP."
+          },
+          {
+            "requisito_id": "RF-03",
+            "dimensiones": {
+              "impacto_negocio": 4,
+              "riesgo_tecnico": 3,
+              "esfuerzo_estimado": 3,
+              "dependencias": 3
+            },
+            "score_final": 3.3,
+            "categoria_moscow": "Should Have",
+            "justificacion": "Should Have — score 3.3/5: alto impacto de negocio (4/5)."
+          },
+          {
+            "requisito_id": "RD-01",
+            "dimensiones": {
+              "impacto_negocio": 4,
+              "riesgo_tecnico": 2,
+              "esfuerzo_estimado": 2,
+              "dependencias": 3
+            },
+            "score_final": 3.3,
+            "categoria_moscow": "Should Have",
+            "justificacion": "Should Have — score 3.3/5: alto impacto de negocio (4/5), bajo coste de implementación (2/5)."
+          },
+          {
+            "requisito_id": "RF-04",
+            "dimensiones": {
+              "impacto_negocio": 4,
+              "riesgo_tecnico": 3,
+              "esfuerzo_estimado": 3,
+              "dependencias": 3
+            },
+            "score_final": 3.3,
+            "categoria_moscow": "Should Have",
+            "justificacion": "Should Have — score 3.3/5: alto impacto de negocio (4/5)."
+          },
+          {
+            "requisito_id": "RD-02",
+            "dimensiones": {
+              "impacto_negocio": 4,
+              "riesgo_tecnico": 2,
+              "esfuerzo_estimado": 2,
+              "dependencias": 3
+            },
+            "score_final": 3.3,
+            "categoria_moscow": "Should Have",
+            "justificacion": "Should Have — score 3.3/5: alto impacto de negocio (4/5), bajo coste de implementación (2/5)."
+          },
+          {
+            "requisito_id": "RNF-03",
+            "dimensiones": {
+              "impacto_negocio": 4,
+              "riesgo_tecnico": 4,
+              "esfuerzo_estimado": 4,
               "dependencias": 2
             },
-            "score_final": 3.65,
-            "categoria_moscow": "Must Have",
-            "justificacion": "Must Have — score 3.65/5: alto impacto de negocio (5/5). Requisito crítico para el MVP."
+            "score_final": 3.1,
+            "categoria_moscow": "Could Have",
+            "justificacion": "Could Have — score 3.1/5: alto impacto de negocio (4/5), esfuerzo de implementación elevado (4/5), riesgo técnico elevado (4/5)."
           },
           {
             "requisito_id": "RNF-05",
             "dimensiones": {
-              "impacto_negocio": 3,
+              "impacto_negocio": 2,
               "riesgo_tecnico": 3,
               "esfuerzo_estimado": 3,
               "dependencias": 4
             },
-            "score_final": 3.15,
-            "categoria_moscow": "Should Have",
-            "justificacion": "Should Have — score 3.15/5: bloquea múltiples componentes del sistema."
+            "score_final": 2.9,
+            "categoria_moscow": "Could Have",
+            "justificacion": "Could Have — score 2.9/5: bajo impacto de negocio (2/5), bloquea múltiples componentes del sistema."
+          },
+          {
+            "requisito_id": "RNF-02",
+            "dimensiones": {
+              "impacto_negocio": 3,
+              "riesgo_tecnico": 3,
+              "esfuerzo_estimado": 3,
+              "dependencias": 2
+            },
+            "score_final": 2.8,
+            "categoria_moscow": "Could Have",
+            "justificacion": "Could Have — score 2.8/5"
+          },
+          {
+            "requisito_id": "RNF-04",
+            "dimensiones": {
+              "impacto_negocio": 3,
+              "riesgo_tecnico": 3,
+              "esfuerzo_estimado": 3,
+              "dependencias": 2
+            },
+            "score_final": 2.8,
+            "categoria_moscow": "Won't Have",
+            "justificacion": "Won't Have — score 2.8/5 No se implementará en este ciclo de desarrollo."
           }
         ],
         "moscow_labels": {
           "RF-01": "Must Have",
           "RF-02": "Must Have",
-          "RF-03": "Must Have",
+          "RF-03": "Should Have",
           "RNF-01": "Must Have",
-          "RNF-02": "Must Have",
-          "RNF-03": "Must Have",
-          "RNF-04": "Must Have",
-          "RNF-05": "Should Have",
-          "RD-01": "Must Have",
-          "RF-04": "Must Have",
-          "RD-02": "Must Have"
+          "RNF-02": "Could Have",
+          "RNF-03": "Could Have",
+          "RNF-04": "Won't Have",
+          "RNF-05": "Could Have",
+          "RD-01": "Should Have",
+          "RF-04": "Should Have",
+          "RD-02": "Should Have"
         },
         "conflict_report": [],
         "priority_scores": {
-          "RF-01": 3.8,
-          "RF-02": 3.8,
-          "RF-03": 3.8,
-          "RNF-01": 3.65,
-          "RNF-02": 3.65,
-          "RNF-03": 3.7,
-          "RNF-04": 3.65,
-          "RNF-05": 3.15,
-          "RD-01": 4.0,
-          "RF-04": 3.8,
-          "RD-02": 4.0
+          "RF-01": 3.3,
+          "RF-02": 3.3,
+          "RF-03": 3.3,
+          "RNF-01": 3.4,
+          "RNF-02": 2.8,
+          "RNF-03": 3.1,
+          "RNF-04": 2.8,
+          "RNF-05": 2.9,
+          "RD-01": 3.3,
+          "RF-04": 3.3,
+          "RD-02": 3.3
         }
       }
     }

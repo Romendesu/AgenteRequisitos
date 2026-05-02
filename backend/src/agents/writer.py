@@ -15,22 +15,27 @@ from langchain_core.prompts import ChatPromptTemplate
 
 PLANTILLA_MD = """# {{ nombre_proyecto }} — Especificación de Requisitos de Software
 
-**Versión:** 1.0 · **Fecha:** {{ metadata.fecha }} · **Generado con MoSCoW AI** · **Requisitos:** {{ todos_requisitos | length }}
+| Campo | Valor |
+|---|---|
+| Versión | 1.0 |
+| Fecha | {{ metadata.fecha }} |
+| Generado por | MoSCoW AI |
+| Total de requisitos | {{ todos_requisitos | length }} |
 
 ---
 
 ## Tabla de Contenidos
 
-| # | Sección |
-|---|---------|
-| 1 | [Introducción](#1-introducción) |
-| 2 | [Descripción General del Sistema](#2-descripción-general-del-sistema) |
-| 3 | [Interesados del Proyecto](#3-interesados-del-proyecto) |
-| 4 | [Requisitos Funcionales (RF)](#4-requisitos-funcionales-rf) |
-| 5 | [Requisitos No Funcionales (RNF)](#5-requisitos-no-funcionales-rnf) |
-| 6 | [Restricciones de Dominio (RD)](#6-restricciones-de-dominio-rd) |
-| 7 | [Clasificación MoSCoW](#7-clasificación-moscow) |
-| 8 | [Anexo — Razonamiento de Clasificación](#8-anexo--razonamiento-de-clasificación) |
+| N° | Sección |
+|----|---------|
+| 1 | Introducción |
+| 2 | Descripción General del Sistema |
+| 3 | Interesados del Proyecto |
+| 4 | Requisitos Funcionales (RF) |
+| 5 | Requisitos No Funcionales (RNF) |
+| 6 | Restricciones de Dominio (RD) |
+| 7 | Clasificación MoSCoW |
+| 8 | Anexo — Razonamiento de Clasificación |
 
 ---
 
@@ -175,15 +180,50 @@ h1 { font-size: 20pt; color: #4f46e5; font-weight: 800; border-bottom: 2px solid
 h2 { font-size: 13pt; color: #3730a3; font-weight: 700; border-bottom: 1px solid #e0e7ff; padding-bottom: 3px; margin-top: 24px; }
 h3 { font-size: 10.5pt; color: #4338ca; font-weight: 600; margin-top: 16px; margin-bottom: 4px; }
 p { margin: 6px 0; }
-table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 9pt; }
-th { background-color: #4f46e5; color: #ffffff; padding: 7px 10px; text-align: left; font-weight: 600; }
-td { padding: 6px 10px; border: 1px solid #e0e7ff; vertical-align: top; }
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 12px 0;
+    font-size: 9pt;
+    table-layout: auto;
+    word-wrap: break-word;
+}
+th {
+    background-color: #4f46e5;
+    color: #ffffff;
+    padding: 7px 10px;
+    text-align: left;
+    font-weight: 600;
+    white-space: nowrap;
+}
+td {
+    padding: 6px 10px;
+    border: 1px solid #e0e7ff;
+    vertical-align: top;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}
 tr:nth-child(even) td { background-color: #f5f3ff; }
+
+/* Primera columna estrecha (etiqueta/clave) */
+td:first-child {
+    white-space: nowrap;
+    font-weight: 600;
+    color: #3730a3;
+    background-color: #eef2ff;
+    width: 1%;
+    padding-right: 16px;
+}
+/* Tablas de requisito: primera columna no estrecha */
+td:first-child + td { width: auto; }
+
 code { background: #ede9fe; color: #4f46e5; padding: 1px 5px; border-radius: 3px; font-family: 'Consolas', monospace; font-size: 9pt; }
 hr { border: none; border-top: 1px solid #e0e7ff; margin: 20px 0; }
 em { color: #7c3aed; font-style: italic; }
 strong { color: #1e1e2e; font-weight: 700; }
 li { margin: 3px 0; }
+a { color: #4f46e5; text-decoration: none; }
 """
 
 

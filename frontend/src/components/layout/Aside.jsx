@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { listarProyectos, listarRequisitos, obtenerPreview, eliminarProyecto } from "../../services/api";
 import { parseMarkdown } from "../../utils/markdown";
+import logoMoscowAI from "../../assets/images/logo_moscowai.jpeg";
 
 // ─── Modal de vista previa ────────────────────────────────────────────────────
 
@@ -211,7 +212,8 @@ export default function Aside({
             <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
             </svg>
-            {isOpen && <span className="ml-2 font-semibold text-sm tracking-wide text-white sidebar-text">MoSCoW AI</span>}
+            {isOpen && <img src={logoMoscowAI} alt="MoSCoW AI" className="sidebar-text ml-1 h-7 w-7 rounded-lg object-cover" />}
+            {isOpen && <span className="ml-1 font-semibold text-sm tracking-wide text-white sidebar-text">MoSCoW AI</span>}
           </button>
         </div>
 

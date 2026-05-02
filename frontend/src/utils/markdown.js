@@ -4,7 +4,8 @@ export function inlineMarkdown(text) {
   return text
     .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
     .replace(/\*(.+?)\*/g,     "<em>$1</em>")
-    .replace(/`(.+?)`/g,       "<code>$1</code>");
+    .replace(/`(.+?)`/g,       "<code>$1</code>")
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>');
 }
 
 // ─── Table parser ─────────────────────────────────────────────────────────────
@@ -74,16 +75,35 @@ export function parseMarkdown(raw) {
   }
   flushTable();
 
-  return blocks.map(({ type, lines: tLines, line }) => {
-    if (type === "table") return buildTable(tLines);
+  const rendered = blocks.map(({ type, lines: tLines, line }) => {
+    if (type === "table") return { tag: "html", html: buildTable(tLines) };
 
-    if (/^### /.test(line))          return `<h3>${inlineMarkdown(line.slice(4))}</h3>`;
-    if (/^## /.test(line))           return `<h2>${inlineMarkdown(line.slice(3))}</h2>`;
-    if (/^# /.test(line))            return `<h1>${inlineMarkdown(line.slice(2))}</h1>`;
-    if (/^---+$/.test(line.trim()))  return "<hr />";
-    if (/^\s*[-*] /.test(line))      return `<li>${inlineMarkdown(line.replace(/^\s*[-*] /, ""))}</li>`;
-    if (/^\d+\. /.test(line))        return `<li>${inlineMarkdown(line.replace(/^\d+\. /, ""))}</li>`;
-    if (line.trim() === "")          return "<br />";
-    return `<p>${inlineMarkdown(line)}</p>`;
-  }).join("");
+    if (/^### /.test(line))          return { tag: "html", html: `<h3>${inlineMarkdown(line.slice(4))}</h3>` };
+    if (/^## /.test(line))           return { tag: "html", html: `<h2>${inlineMarkdown(line.slice(3))}</h2>` };
+    if (/^# /.test(line))            return { tag: "html", html: `<h1>${inlineMarkdown(line.slice(2))}</h1>` };
+    if (/^---+$/.test(line.trim()))  return { tag: "html", html: "<hr />" };
+    if (/^\s*[-*] /.test(line))      return { tag: "li", html: inlineMarkdown(line.replace(/^\s*[-*] /, "")) };
+    if (/^\d+\. /.test(line))        return { tag: "li", html: inlineMarkdown(line.replace(/^\d+\. /, "")) };
+    if (line.trim() === "")          return { tag: "html", html: "<br />" };
+    return { tag: "html", html: `<p>${inlineMarkdown(line)}</p>` };
+  });
+
+  const output = [];
+  let i = 0;
+  while (i < rendered.length) {
+    if (rendered[i].tag === "li") {
+      const items = [];
+      while (i < rendered.length && rendered[i].tag === "li") {
+        items.push(rendered[i].html);
+        i++;
+      }
+      const isToc = items.every((h) => /<a\s[^>]*href="#/.test(h));
+      const cls = isToc ? ' class="toc"' : "";
+      output.push(`<ul${cls}>${items.map((h) => `<li>${h}</li>`).join("")}</ul>`);
+    } else {
+      output.push(rendered[i].html);
+      i++;
+    }
+  }
+  return output.join("");
 }

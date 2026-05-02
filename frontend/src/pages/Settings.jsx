@@ -121,7 +121,6 @@ function ThemeToggle() {
           className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full shadow transition-transform duration-300 flex items-center justify-center text-xs
             ${isDark ? "translate-x-6 bg-white" : "translate-x-0 bg-white"}`}
         >
-          {isDark ? "🌙" : "☀️"}
         </span>
       </button>
     </div>

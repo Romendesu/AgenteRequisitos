@@ -19,9 +19,7 @@ export default function Login() {
     <div className="min-h-screen bg-gray-950 flex items-center justify-center px-4">
       <div className="w-full max-w-sm space-y-8">
         <div className="text-center space-y-2">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-2xl font-bold text-white mx-auto">
-            M
-          </div>
+          <img src="/src/assets/images/logo_moscowai.jpeg" alt="MoSCoW AI" className="w-14 h-14 rounded-2xl mx-auto object-cover shadow-md" />
           <h1 className="text-2xl font-extrabold text-white">Iniciar sesión</h1>
           <p className="text-gray-400 text-sm">Accede a tus proyectos MoSCoW AI</p>
         </div>

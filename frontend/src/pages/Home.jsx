@@ -4,6 +4,8 @@ import { useNavigate } from "react-router-dom";
 import Aside from "../components/layout/Aside";
 import Dock from "../components/layout/Dock";
 import RequirementsPanel from "../components/layout/RequirementsPanel";
+import MobileProjectSheet from "../components/layout/MobileProjectSheet";
+import MobileRequirementsSheet from "../components/layout/MobileRequirementsSheet";
 import Settings from "./Settings";
 import useIsMobile from "../hooks/matchMedia";
 import useAside from "../hooks/useAside";
@@ -34,9 +36,7 @@ function ProjectSetupForm({ onStart, loading }) {
     <div className="flex flex-col items-center justify-center h-full px-4">
       <div className="w-full max-w-md space-y-6">
         <div className="text-center space-y-2">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-2xl font-bold text-white mx-auto">
-            M
-          </div>
+          <img src="/src/assets/images/logo_moscowai.jpeg" alt="MoSCoW AI" className="w-14 h-14 rounded-2xl mx-auto object-cover shadow-md" />
           <h1 className="text-2xl font-extrabold text-white">MoSCoW AI</h1>
           <p className="text-gray-400 text-sm">
             Cuéntame sobre tu proyecto antes de comenzar
@@ -125,6 +125,7 @@ export default function Home() {
   const [asideKey, setAsideKey] = useState(0);
   const [panelOpen, setPanelOpen] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
+  const [mobileSheet, setMobileSheet] = useState(null); // 'projects' | 'requirements' | null
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -170,7 +171,13 @@ export default function Home() {
   return (
     <div className="h-screen bg-gray-950 overflow-hidden">
       {isMobile ? (
-        <Dock toggleAside={toggleAside} />
+        <Dock
+          activeSheet={mobileSheet}
+          requisitosCount={requisitos.length}
+          onProyectos={() => setMobileSheet((s) => s === "projects" ? null : "projects")}
+          onRequisitosMobile={() => setMobileSheet((s) => s === "requirements" ? null : "requirements")}
+          onSettings={() => { setMobileSheet(null); setShowSettings(true); }}
+        />
       ) : (
         <Aside
           refreshKey={asideKey}
@@ -191,6 +198,27 @@ export default function Home() {
           user={user}
           onClose={() => setShowSettings(false)}
           onUpdateProfile={updateProfile}
+        />
+      )}
+
+      {isMobile && mobileSheet === "projects" && (
+        <MobileProjectSheet
+          refreshKey={asideKey}
+          onClose={() => setMobileSheet(null)}
+          onNewProject={handleNewProject}
+          onSelectProject={handleSelectProject}
+          onContinueProject={handleContinueProject}
+        />
+      )}
+
+      {isMobile && mobileSheet === "requirements" && phase !== PHASE.SETUP && (
+        <MobileRequirementsSheet
+          onClose={() => setMobileSheet(null)}
+          requisitos={requisitos}
+          moscowLabels={moscowLabels}
+          docInfo={docInfo}
+          canFinalize={canFinalize}
+          onFinalizar={() => { finalizar(); setMobileSheet(null); }}
         />
       )}
 
