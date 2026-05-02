@@ -14,7 +14,9 @@
 6. [Sistema de clasificación de requisitos](#6-sistema-de-clasificación-de-requisitos)
 7. [Sistema de priorización MoSCoW](#7-sistema-de-priorización-moscow)
 8. [API REST](#8-api-rest)
-9. [Puesta en marcha](#9-puesta-en-marcha)
+9. [Frontend](#9-frontend)
+10. [Puesta en marcha](#10-puesta-en-marcha)
+11. [Estructura del proyecto](#11-estructura-del-proyecto)
 
 ---
 
@@ -44,6 +46,8 @@ Documento SRS (RF / RNF / RD · MoSCoW · Anexo)
 - Generación de documento SRS en **Markdown**, **PDF** y **DOCX**
 - Historial de proyectos con vista previa del documento
 - Autenticación JWT con registro y login
+- Interfaz responsiva con soporte completo para escritorio y móvil
+- Modo claro y modo oscuro
 
 ---
 
@@ -53,13 +57,13 @@ Documento SRS (RF / RNF / RD · MoSCoW · Anexo)
 
 | Componente | Tecnología |
 |---|---|
-| Framework API | FastAPI 0.115 |
+| Framework API | FastAPI + Uvicorn |
 | Base de datos | TinyDB (NoSQL embebida, sin servidor) |
 | Autenticación | JWT (PyJWT) + bcrypt |
 | Orquestación LLM | LangChain + LangChain-Ollama |
 | Inferencia local | Ollama |
 | Plantillas | Jinja2 |
-| Exportación PDF | WeasyPrint + markdown2 |
+| Exportación PDF | xhtml2pdf / WeasyPrint (fallback) + markdown2 |
 | Exportación DOCX | python-docx |
 | Validación de datos | Pydantic v2 |
 
@@ -72,6 +76,7 @@ Documento SRS (RF / RNF / RD · MoSCoW · Anexo)
 | Estilos | Tailwind CSS + DaisyUI |
 | Routing | React Router v7 |
 | HTTP client | Fetch API nativo |
+| Fuentes | Google Sans Flex, Roboto, Roboto Mono |
 
 ---
 
@@ -82,8 +87,8 @@ Documento SRS (RF / RNF / RD · MoSCoW · Anexo)
 │                         FRONTEND (React 19)                      │
 │                                                                  │
 │  ┌──────────────┐   ┌──────────────┐   ┌──────────────────────┐ │
-│  │  Login /     │   │  Home (Chat) │   │  Aside (historial)   │ │
-│  │  Register    │   │  useChat     │   │  ProjectRow          │ │
+│  │  Login /     │   │  Home (Chat) │   │  Aside / Dock        │ │
+│  │  Register    │   │  useChat     │   │  historial proyectos  │ │
 │  └──────────────┘   └──────┬───────┘   └──────────────────────┘ │
 │                            │ fetch + Bearer JWT                  │
 └────────────────────────────┼────────────────────────────────────┘
@@ -96,15 +101,15 @@ Documento SRS (RF / RNF / RD · MoSCoW · Anexo)
 │  │   procesar_requisito() → priorizar() → generar_documento() │ │
 │  └──────────────────┬────────────────────────────────────────┘ │
 │                     │                                            │
-│    ┌────────────────┼───────────────────────────┐               │
-│    │                │                           │               │
-│    ▼                ▼                           ▼               │
-│  Extractor      Validador                   Priorizador          │
-│  (llama3.1:8b)  (llama3.2)                  (determinista)      │
-│                                                │                 │
-│                                                ▼                 │
-│                                            Writer                │
-│                                         (llama3.2 + Jinja2)    │
+│    ┌────────────────┼────────────────────┐                      │
+│    │                │                    │                      │
+│    ▼                ▼                    ▼                      │
+│  Extractor      Validador           Priorizador                  │
+│  (llama3.1:8b)  (llama3.2)          (determinista)              │
+│                                          │                      │
+│                                          ▼                      │
+│                                       Writer                    │
+│                                    (llama3.2 + Jinja2)          │
 │                                                                  │
 │  ┌──────────────────────────────────────────────────────────┐   │
 │  │              TinyDB  (db.json)                           │   │
@@ -126,7 +131,7 @@ Documento SRS (RF / RNF / RD · MoSCoW · Anexo)
 
 ### Agente 1 — Extractor (`AgenteRequisitos`)
 
-**Archivo:** `backend/src/agents/extractor.py`
+**Archivo:** `backend/src/agents/requisitos.py`
 
 Transforma texto libre en un objeto `Requisito` estructurado.
 
@@ -138,24 +143,17 @@ Transforma texto libre en un objeto `Requisito` estructurado.
 
 **Flujo de clasificación de dos etapas:**
 
-1. **Pre-clasificador determinista** (`_pre_clasificar`): sistema de puntuación por expresiones regulares ponderadas. Cada tipo (Funcional, No Funcional, Dominio) acumula puntos según señales lingüísticas. Si la puntuación máxima supera el umbral mínimo (6 pts), el tipo queda determinado sin usar el LLM.
+1. **Pre-clasificador determinista** (`_pre_clasificar`): sistema de puntuación por expresiones regulares ponderadas. Si la puntuación máxima supera el umbral mínimo (6 pts), el tipo queda determinado sin usar el LLM.
 
-2. **Fallback LLM** (`_clasificar_con_llm`): solo se activa para casos ambiguos. El LLM recibe un prompt corto que le obliga a elegir entre los 3 tipos, con sesgo explícito hacia Funcional para evitar sobreclasificación en Dominio.
+2. **Fallback LLM** (`_clasificar_con_llm`): solo se activa para casos ambiguos.
 
 **Señales por tipo (muestra):**
 
 | Tipo | Señal de alta confianza (10 pts) |
 |---|---|
 | Funcional | `"el sistema debe/podrá [calcular\|enviar\|gestionar…]"` |
-| Funcional | `"permitirá al usuario/operador [acción]"` |
 | No Funcional | `"\d+ ms"`, `"9X.X %"` de disponibilidad |
-| No Funcional | `"\d+ usuarios? concurrentes"` |
-| Dominio | Nombre de ley: `RGPD\|GDPR\|HIPAA\|ISO \d+` |
-| Dominio | `"conforme a/según la normativa/reglamento"` |
-| Dominio | `"nunca puede/no puede modificarse una vez"` |
-| Dominio | `"ningún [actor] puede/podrá"` |
-
-Si el tipo es conocido, el LLM solo redacta la descripción técnica y el criterio de aceptación (tarea mucho más fiable que clasificar).
+| Dominio | `RGPD\|GDPR\|HIPAA\|ISO \d+`, `"conforme a la normativa"` |
 
 ---
 
@@ -177,15 +175,9 @@ Criterios evaluados: claridad, verificabilidad, atomicidad, trazabilidad.
 
 ### Agente 3 — Priorizador (`AgentePriorizador`)
 
-**Archivo:** `backend/src/agents/prioritizer.py`
+**Archivo:** `backend/src/agents/priorizador.py`
 
-Asigna categoría MoSCoW a cada requisito mediante scoring determinista (sin LLM para las dimensiones, evitando la tendencia del LLM a devolver siempre valores centrales).
-
-| Propiedad | Detalle |
-|---|---|
-| Modelo | `llama3.2` (solo para detección de conflictos) |
-| Entrada | Lista de requisitos del proyecto |
-| Salida | `PriorizacionResultado` con scores, labels MoSCoW y reporte de conflictos |
+Asigna categoría MoSCoW a cada requisito mediante scoring determinista.
 
 **Scoring multidimensional:**
 
@@ -205,42 +197,39 @@ score = impacto_negocio × 0.40
 | ≥ 1.5 | Could Have |
 | < 1.5 | Won't Have |
 
-**Dimensiones evaluadas de forma determinista:**
-- `impacto_negocio`: derivado del campo `prioridad` (Alta → 5, Media → 3, Baja → 1) más bonificación por palabras clave críticas (`autenticación`, `seguridad`, `disponibilidad`…)
-- `riesgo_tecnico`: detectado por keywords de complejidad (`algoritmo genético`, `backtracking`, `cifrado`…)
-- `esfuerzo_estimado`: por tipo de requisito y complejidad léxica
-- `dependencias`: requisitos "core" (motor, autenticación, modelo de datos) bloquean más
-
 ---
 
 ### Agente 4 — Writer (`AgenteWriter`)
 
 **Archivo:** `backend/src/agents/writer.py`
 
-Genera el documento SRS formal.
+Genera el documento SRS formal en tres formatos.
 
 | Propiedad | Detalle |
 |---|---|
-| Modelo | `llama3.2` (solo para la introducción narrativa) |
-| Entrada | Lista de requisitos + priorización |
-| Salida | `.md`, `.pdf`, `.docx` en `outputs/{project_id}/documento_requisitos/` |
+| Modelo | `llama3.2` (solo para introducción narrativa) |
+| Entrada | Lista de requisitos + priorización + stakeholders |
+| Salida | `.md`, `.pdf`, `.docx` |
 
 **Estructura del documento generado:**
 
 ```
+Portada con tabla de metadatos (versión, fecha, generado por, total)
+Tabla de Contenidos
 1. Introducción
    1.1 Propósito del documento   ← generado por LLM
    1.2 Alcance del sistema       ← generado por LLM
    1.3 Definiciones y acrónimos
-2. Descripción general           ← generada por LLM
-3. Requisitos Funcionales (RF)
-4. Requisitos No Funcionales (RNF)
-5. Restricciones de Dominio (RD)
-6. Tabla de priorización MoSCoW
-ANEXO B — Razonamiento de clasificación
+2. Descripción General del Sistema ← generada por LLM
+3. Interesados del Proyecto
+4. Requisitos Funcionales (RF)
+5. Requisitos No Funcionales (RNF)
+6. Restricciones de Dominio (RD)
+7. Clasificación MoSCoW
+Anexo — Razonamiento de Clasificación
 ```
 
-El cuerpo de las secciones 3-6 y el anexo se renderizan con **Jinja2** usando los datos estructurados; solo la introducción es generada libremente por el LLM.
+El CSS del PDF está optimizado para `xhtml2pdf` con columnas de etiqueta de ancho fijo y `word-wrap: break-word` para evitar desbordamientos en tablas.
 
 ---
 
@@ -250,99 +239,171 @@ Todos los modelos corren localmente mediante **Ollama** — sin API externa, sin
 
 | Modelo | Agente | Rol |
 |---|---|---|
-| `llama3.1:8b` | Extractor | Clasificación y redacción de requisitos. El modelo de 8B sigue instrucciones JSON mucho mejor que el 3B. Configurable con `OLLAMA_MODEL`. |
-| `llama3.2` (3B) | Validador | Evaluación de calidad. Tarea más simple, el 3B es suficiente y más rápido. |
-| `llama3.2` (3B) | Priorizador | Solo para detección de conflictos (no-crítico). El scoring es determinista. |
-| `llama3.2` (3B) | Writer | Generación de la introducción narrativa del documento. |
-
-**Variable de entorno:**
-```bash
-OLLAMA_MODEL=llama3.1:8b   # modelo del extractor (por defecto)
-```
+| `llama3.1:8b` | Extractor | Clasificación y redacción de requisitos |
+| `llama3.2` (3B) | Validador | Evaluación de calidad |
+| `llama3.2` (3B) | Priorizador | Detección de conflictos (scoring es determinista) |
+| `llama3.2` (3B) | Writer | Generación de la introducción narrativa |
 
 ---
 
 ## 6. Sistema de clasificación de requisitos
 
-### Tipos de requisitos
-
 | Tipo | ID | Badge | Descripción |
 |---|---|---|---|
-| Funcional | RF-XX | `RF · Funcional` (azul) | Acción que el sistema ejecuta: el sistema debe calcular / enviar / gestionar… |
-| No Funcional | RNF-XX | `RNF · No Funcional` (morado) | Atributo de calidad medible: latencia, disponibilidad %, usuarios concurrentes… |
-| Restricción de Dominio | RD-XX | `RD · Restricción de Dominio` (ámbar) | Regla externa o física que el sistema no puede violar: leyes, límites físicos, reglas institucionales… |
-
-### Cómo se asigna el ID
-
-El ID se genera incrementalmente por tipo dentro de cada proyecto:
-
-```python
-prefix = "RNF" if "No Funcional" in tipo else ("RD" if "Dominio" in tipo else "RF")
-count  = # requisitos existentes del mismo prefijo en el proyecto
-id     = f"{prefix}-{count + 1:02d}"   # → RF-01, RF-02, RNF-01…
-```
+| Funcional | RF-XX | azul | Acción que el sistema ejecuta |
+| No Funcional | RNF-XX | morado | Atributo de calidad medible |
+| Restricción de Dominio | RD-XX | ámbar | Regla externa o física que el sistema no puede violar |
 
 ### Detección de duplicados
 
-Antes de persistir, se compara la descripción generada con todas las existentes en el proyecto. Si la similitud por intersección de palabras supera el 75 %, el backend devuelve HTTP 409 y el frontend muestra un aviso sin guardar el requisito.
+Antes de persistir, se compara la descripción generada con todas las existentes. Si la similitud por intersección de palabras supera el 75 %, el backend devuelve HTTP 409.
 
 ---
 
 ## 7. Sistema de priorización MoSCoW
 
-La priorización se lanza automáticamente al generar el documento (o manualmente vía API). Los resultados quedan persistidos en TinyDB y en `outputs/{project_id}/priorizacion.json`.
+La priorización se lanza automáticamente al generar el documento. Los resultados quedan persistidos en TinyDB y en `outputs/{project_id}/priorizacion.json`.
 
 **Palabras clave que elevan el impacto de negocio:**
-autenticación, seguridad, cifrado, RGPD, disponibilidad, uptime, tiempo real, motor de generación, gestión de usuarios, kill switch, obligatorio, imprescindible…
+autenticación, seguridad, cifrado, disponibilidad, uptime, tiempo real, RGPD, kill switch…
 
 **Palabras clave que indican Won't Have:**
-futuro, próxima versión, v2, no prioritario, opcional avanzado, nice to have, descartado, fuera de alcance…
+futuro, próxima versión, v2, opcional avanzado, nice to have, fuera de alcance…
 
 ---
 
 ## 8. API REST
 
-Base URL: `http://localhost:8000/api`
+Base URL de desarrollo: `http://localhost:8000` (el frontend proxifica `/api/*` → `http://localhost:8000`).
 
 ### Auth
 
 | Método | Ruta | Descripción |
 |---|---|---|
-| `POST` | `/auth/register` | Registro de usuario |
-| `POST` | `/auth/login` | Login → devuelve JWT |
+| `POST` | `/register` | Registro de usuario |
+| `POST` | `/login` | Login → devuelve JWT |
+| `PUT` | `/profile` | Actualizar perfil (username, email, password, avatar) |
 
 ### Proyectos
 
 | Método | Ruta | Descripción |
 |---|---|---|
 | `POST` | `/projects` | Crear proyecto |
-| `GET` | `/projects` | Listar proyectos del usuario |
-| `GET` | `/projects/{id}` | Detalle del proyecto |
+| `GET` | `/projects` | Listar proyectos del usuario autenticado |
 | `DELETE` | `/projects/{id}` | Eliminar proyecto y sus datos |
 
 ### Requisitos
 
 | Método | Ruta | Descripción |
 |---|---|---|
-| `POST` | `/projects/{id}/requisitos` | Procesar y guardar un requisito |
+| `POST` | `/projects/{id}/requisitos` | Procesar y guardar un requisito vía chat |
 | `GET` | `/projects/{id}/requisitos` | Listar todos los requisitos |
-| `DELETE` | `/projects/{id}/requisitos/{req_id}` | Eliminar un requisito |
 
-### Priorización y documento
+### Stakeholders
 
 | Método | Ruta | Descripción |
 |---|---|---|
-| `POST` | `/projects/{id}/priorizar` | Ejecutar priorización MoSCoW |
-| `GET` | `/projects/{id}/priorizacion` | Obtener resultado de priorización |
-| `POST` | `/projects/{id}/documento` | Generar documento SRS |
-| `GET` | `/projects/{id}/documento/preview` | Vista previa en Markdown |
-| `GET` | `/projects/{id}/documento/{formato}` | Descargar: `md`, `pdf` o `docx` |
+| `POST` | `/projects/{id}/stakeholders` | Guardar interesados del proyecto |
 
-> Todos los endpoints (excepto `/auth/*`) requieren `Authorization: Bearer <token>`. El endpoint de descarga también acepta `?token=<jwt>` como query param.
+### Documento
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| `POST` | `/projects/{id}/finalizar` | Validar + priorizar + generar documento |
+| `GET` | `/projects/{id}/preview` | Vista previa en Markdown |
+| `GET` | `/projects/{id}/download/{fmt}` | Descargar: `md`, `pdf` o `docx` |
+
+> Todos los endpoints (excepto `/register` y `/login`) requieren `Authorization: Bearer <token>`.
 
 ---
 
-## 9. Puesta en marcha
+## 9. Frontend
+
+### Flujo de fases del chat
+
+| Fase | Descripción |
+|---|---|
+| `SETUP` | Formulario de nombre y descripción del proyecto |
+| `STAKEHOLDERS` | Captura de interesados y roles |
+| `COLLECTING` | Iteración de requisitos mediante chat |
+| `FINALIZING` | El sistema valida, prioriza y genera el documento |
+| `DONE` | Documento disponible para ver y exportar |
+
+### Layout escritorio
+
+```
+┌────────────┬──────────────────────────┬──────────────┐
+│            │                          │              │
+│   Aside    │     Área de chat         │ Requirements │
+│  (64-256px)│     (max-w-2xl)          │  Panel(288px)│
+│            │                          │              │
+│ colapsable │  ProjectSetupForm /      │  colapsable  │
+│            │  ChatMessages +          │              │
+│            │  PromptLabel             │              │
+└────────────┴──────────────────────────┴──────────────┘
+```
+
+**Aside (sidebar):**
+- Colapsable entre 64px (iconos) y 256px (texto completo)
+- Lista de proyectos expandible con acciones: abrir chat, añadir requisitos, vista previa del documento, eliminar (con confirmación)
+- Buscador de proyectos
+- Footer con perfil de usuario, configuración y cerrar sesión
+
+**RequirementsPanel:**
+- Panel derecho colapsable (288px)
+- Lista de requisitos con badges de tipo y categoría MoSCoW
+- Grid de contadores MoSCoW (Must / Should / Could / Won't)
+- Botones para ver documento y exportar (MD, PDF, DOCX)
+
+### Layout móvil (< 768px)
+
+```
+┌─────────────────────────────────┐
+│                                 │
+│         Área de chat            │
+│         (full width)            │
+│                                 │
+├─────────────────────────────────┤
+│ Proyectos │ Chat │ Req │ Config  │  ← Dock
+└─────────────────────────────────┘
+```
+
+**Dock (barra de navegación inferior):**
+- 4 tabs: Proyectos, Chat, Requisitos, Configuración
+- Indicador visual de tab activo (línea superior índigo)
+- El tab de Requisitos muestra el conteo cuando hay requisitos
+
+**MobileProjectSheet** — bottom sheet con toda la funcionalidad del sidebar:
+- Botón nuevo proyecto
+- Búsqueda de proyectos
+- Filas expandibles con acciones (abrir chat, añadir, vista previa, eliminar)
+
+**MobileRequirementsSheet** — bottom sheet con:
+- Lista completa de requisitos con badges
+- Grid MoSCoW
+- Ver/exportar documento
+- Generar/actualizar documento
+
+### Parser de Markdown
+
+`frontend/src/utils/markdown.js` implementa un parser custom (sin dependencias) que convierte el markdown del backend a HTML:
+
+| Feature | Comportamiento |
+|---|---|
+| Headings | h1 / h2 / h3 |
+| Listas | `<li>` consecutivos agrupados en `<ul>` |
+| Tabla de contenidos | Lista de links `#anchor` → `<ul class="toc">` con estilo especial |
+| Links | `[texto](url)` → `<a href="url">` |
+| Tablas | Parser de pipes con thead/tbody |
+| Inline | `**bold**`, `*italic*`, `` `code` `` |
+
+### Temas
+
+Modo oscuro y modo claro controlados por `data-theme="light"` en el `<html>`. Los overrides están centralizados en `frontend/src/assets/styles/index.css` y cubren clases `gray-*`, `slate-*` y los estilos de `.doc-preview`.
+
+---
+
+## 10. Puesta en marcha
 
 ### Requisitos previos
 
@@ -360,20 +421,14 @@ ollama pull llama3.2
 ### 2. Backend
 
 ```bash
-cd backend
-python -m venv .venv
-# Windows:
-.venv\Scripts\activate
-# Linux/macOS:
-source .venv/bin/activate
-
+# Desde la raíz del proyecto
 pip install -r requirements.txt
-cd src
+
+cd backend/src
 uvicorn main:app --reload --port 8000
 ```
 
-El backend queda disponible en `http://localhost:8000`.  
-La documentación Swagger está en `http://localhost:8000/docs`.
+Swagger disponible en `http://localhost:8000/docs`.
 
 ### 3. Frontend
 
@@ -383,7 +438,8 @@ npm install
 npm run dev
 ```
 
-La aplicación queda disponible en `http://localhost:5173`.
+Aplicación disponible en `http://localhost:5173`.  
+El proxy de Vite redirige automáticamente `/api/*` → `http://127.0.0.1:8000`.
 
 ### Variables de entorno (opcionales)
 
@@ -394,48 +450,66 @@ La aplicación queda disponible en `http://localhost:5173`.
 
 ---
 
-## Estructura del proyecto
+## 11. Estructura del proyecto
 
 ```
 AgenteRequisitos/
 ├── backend/
 │   └── src/
-│       ├── main.py              # FastAPI + GestorProyecto
-│       ├── auth.py              # JWT + bcrypt
-│       ├── database.py          # TinyDB helpers
+│       ├── main.py                  # FastAPI app + GestorProyecto + endpoints
+│       ├── auth.py                  # JWT + bcrypt
+│       ├── database.py              # TinyDB helpers
 │       ├── agents/
 │       │   ├── __init__.py
-│       │   ├── extractor.py     # AgenteRequisitos (pre-clasificador + LLM)
-│       │   ├── validador.py     # AgenteValidador
-│       │   ├── prioritizer.py   # AgentePriorizador (scoring determinista)
-│       │   └── writer.py        # AgenteWriter (Jinja2 + WeasyPrint + python-docx)
-│       └── utils/
-│           └── schemas.py       # Pydantic models
+│       │   ├── requisitos.py        # AgenteRequisitos (pre-clasificador + LLM)
+│       │   ├── validador.py         # AgenteValidador
+│       │   ├── priorizador.py       # AgentePriorizador (scoring determinista)
+│       │   └── writer.py            # AgenteWriter (Jinja2 + xhtml2pdf + python-docx)
+│       ├── data/                    # TinyDB — db.json
+│       └── outputs/                 # Documentos generados por proyecto
+│           └── {project_id}/
+│               ├── priorizacion.json
+│               └── documento_requisitos/
+│                   ├── documento_requisitos.md
+│                   ├── documento_requisitos.pdf
+│                   └── documento_requisitos.docx
 ├── frontend/
 │   └── src/
-│       ├── pages/
-│       │   ├── Home.jsx         # Página principal (chat)
-│       │   ├── Login.jsx
-│       │   └── Register.jsx
+│       ├── app/
+│       │   ├── App.jsx
+│       │   └── router/AppRouter.jsx
+│       ├── assets/
+│       │   ├── images/
+│       │   │   └── logo_moscowai.jpeg
+│       │   └── styles/
+│       │       └── index.css        # Estilos globales, temas oscuro/claro
 │       ├── components/
 │       │   ├── layout/
-│       │   │   ├── Aside.jsx    # Sidebar con historial de proyectos
-│       │   │   └── Button.jsx
+│       │   │   ├── Aside.jsx                    # Sidebar desktop colapsable
+│       │   │   ├── Dock.jsx                     # Barra de navegación móvil
+│       │   │   ├── RequirementsPanel.jsx         # Panel de requisitos desktop
+│       │   │   ├── MobileProjectSheet.jsx        # Sheet de proyectos (móvil)
+│       │   │   └── MobileRequirementsSheet.jsx   # Sheet de requisitos (móvil)
 │       │   └── ui/
-│       │       ├── ChatMessage.jsx   # Tarjetas RF/RNF/RD + documento
-│       │       └── PromptLabel.jsx   # Input de chat
+│       │       ├── ChatMessage.jsx              # Tarjetas RF/RNF/RD + documento
+│       │       ├── PromptLabel.jsx              # Input del chat
+│       │       └── Button.jsx
 │       ├── hooks/
-│       │   ├── useChat.js       # Lógica de conversación y estado
-│       │   └── useAuth.js       # Login/logout/token
-│       └── services/
-│           └── api.js           # Cliente HTTP con auto-inject de Bearer
-└── outputs/                     # Documentos generados (por proyecto)
-    └── {project_id}/
-        ├── priorizacion.json
-        └── documento_requisitos/
-            ├── documento_requisitos.md
-            ├── documento_requisitos.pdf
-            └── documento_requisitos.docx
+│       │   ├── useChat.js           # Máquina de estados del flujo conversacional
+│       │   ├── useAside.js          # Estado del sidebar
+│       │   ├── useAuth.js           # Login / logout / token
+│       │   └── matchMedia.jsx       # useIsMobile — breakpoint 768px
+│       ├── pages/
+│       │   ├── Home.jsx             # Layout principal — orquesta sidebar, chat y panels
+│       │   ├── Login.jsx
+│       │   ├── Register.jsx
+│       │   └── Settings.jsx         # Configuración: perfil, tema oscuro/claro
+│       ├── services/
+│       │   └── api.js               # Cliente REST con auto-inject de Bearer
+│       └── utils/
+│           └── markdown.js          # Parser markdown → HTML (custom, sin dependencias)
+├── requirements.txt
+└── README.md
 ```
 
 ---
